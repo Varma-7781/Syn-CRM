@@ -1,0 +1,14 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { SalesCockpit } from "@/components/crm/SalesCockpit";
+
+export const Route = createFileRoute("/sales/pipeline")({
+  head: () => ({
+    meta: [
+      { title: "My Lead Pipeline — SYNTRAXS CRM" },
+      { name: "description", content: "Your assigned leads, follow-ups and quota in one sales cockpit." },
+      { property: "og:title", content: "My Lead Pipeline — SYNTRAXS CRM" },
+      { property: "og:description", content: "Your assigned leads, follow-ups and quota in one sales cockpit." },
+    ],
+  }),
+  component: SalesCockpit,
+});
