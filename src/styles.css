@@ -191,10 +191,15 @@
 
 @layer base {
   * { border-color: var(--color-border); }
-  html { color-scheme: dark; height: 100%; }
+  html {
+    color-scheme: dark;
+    height: 100%;
+    overflow-x: hidden;
+  }
   html.light { color-scheme: light; }
   body {
-    height: 100%;
+    min-height: 100%;
+    overflow-x: hidden;
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
@@ -203,6 +208,7 @@
     -moz-osx-font-smoothing: grayscale;
     transition: background-color .2s var(--ease-out), color .2s var(--ease-out);
     line-height: 1.5;
+    touch-action: manipulation;
   }
   ::selection { background: color-mix(in oklab, var(--primary) 35%, transparent); }
 
@@ -290,6 +296,12 @@
   background-size: 520px 520px;
   background-position: top left;
   transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .dashboard-doodle-bg {
+    background-size: 340px 340px;
+  }
 }
 
 .light .dashboard-doodle-bg {

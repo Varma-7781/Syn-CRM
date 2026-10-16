@@ -211,13 +211,13 @@ function Reports() {
         </Button>
       }
     >
-      <div className="flex gap-1 border-b border-border">
+      <div className="flex gap-1 border-b border-border overflow-x-auto whitespace-nowrap">
         {TABS.map((t, i) => (
           <button
             key={t}
             onClick={() => setTab(i)}
             className={cn(
-              "relative px-3.5 pb-2.5 pt-1 text-[13.5px] transition-colors",
+              "relative shrink-0 px-3.5 pb-2.5 pt-1 text-[13px] sm:text-[13.5px] transition-colors",
               tab === i ? "text-foreground font-semibold" : "text-muted-foreground hover:text-foreground font-medium"
             )}
           >
@@ -235,7 +235,7 @@ function Reports() {
           {tab === 0 && (
             <>
               <Donut data={byStatus} />
-              <ul className="mt-3 grid grid-cols-2 gap-2">
+              <ul className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {byStatus.map((o, i) => (
                   <li key={o.name} className="flex items-center gap-2 text-[12.5px]">
                     <span className="size-2 rounded-sm" style={{ background: CHART_COLORS[i % 5] }} />

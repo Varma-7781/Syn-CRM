@@ -304,7 +304,7 @@ function AdminLeadsPage() {
             <DialogDescription>Create a new lead opportunity in your CRM pipeline.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddSubmit} className="space-y-4 pt-2">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-[13px] font-semibold text-foreground">Company Name *</label>
                 <input
@@ -327,7 +327,7 @@ function AdminLeadsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-[13px] font-semibold text-foreground">Phone Number</label>
                 <input
@@ -349,7 +349,7 @@ function AdminLeadsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-[13px] font-semibold text-foreground">Expected Value (₹)</label>
                 <input
@@ -377,7 +377,7 @@ function AdminLeadsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-[13px] font-semibold text-foreground">Priority</label>
                 <select
@@ -439,12 +439,12 @@ function AdminLeadsPage() {
           </DialogHeader>
 
           <div className="space-y-4 pt-3">
-            <div className="flex items-center justify-between rounded-lg border border-border bg-background p-3 text-[13px]">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 rounded-lg border border-border bg-background p-3 text-[13px]">
               <div>
                 <div className="font-medium text-foreground">Need a sample format?</div>
                 <div className="text-[11.5px] text-muted-foreground">Download our pre-formatted CSV template.</div>
               </div>
-              <Button size="sm" variant="outline" onClick={handleDownloadTemplate}>
+              <Button size="sm" variant="outline" onClick={handleDownloadTemplate} className="shrink-0 self-start sm:self-auto">
                 <FileSpreadsheet className="size-3.5" /> Template
               </Button>
             </div>

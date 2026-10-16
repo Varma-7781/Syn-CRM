@@ -73,32 +73,34 @@ export function LeadTable({ leads, admin }: { leads: Lead[]; admin?: boolean }) 
 
   return (
     <div className="panel overflow-hidden">
-      <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
-        <label className="flex h-8 min-w-[220px] flex-1 items-center gap-2 rounded-md border border-border bg-background px-2.5 focus-within:border-primary sm:max-w-xs">
-          <Search className="size-3.5 text-muted-foreground" />
+      <div className="flex flex-wrap items-center gap-2 border-b border-border p-2.5 sm:p-3">
+        <label className="flex h-8 w-full sm:w-auto sm:min-w-[220px] sm:max-w-xs flex-1 items-center gap-2 rounded-md border border-border bg-background px-2.5 focus-within:border-primary">
+          <Search className="size-3.5 shrink-0 text-muted-foreground" />
           <input value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} placeholder="Search company, client, email" className="w-full bg-transparent text-[13px] text-foreground outline-none placeholder:text-muted-foreground" />
         </label>
-        <select className={selectCls} value={status} onChange={(e) => { setStatus(e.target.value); setPage(0); }}>
-          <option value="">All statuses</option>
-          {LEAD_STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
-        </select>
-        <select className={selectCls} value={priority} onChange={(e) => { setPriority(e.target.value); setPage(0); }}>
-          <option value="">Any priority</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
-        </select>
-        {admin && (
-          <select className={selectCls} value={rep} onChange={(e) => { setRep(e.target.value); setPage(0); }}>
-            <option value="">All reps</option><option value="__none">Unassigned</option>
-            {salesReps.map((r) => <option key={r} value={r}>{r}</option>)}
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto flex-1 sm:flex-initial">
+          <select className={cn(selectCls, "flex-1 sm:flex-initial min-w-[110px]")} value={status} onChange={(e) => { setStatus(e.target.value); setPage(0); }}>
+            <option value="">All statuses</option>
+            {LEAD_STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
           </select>
-        )}
-        {filtered && <button onClick={() => { setQ(""); setStatus(""); setPriority(""); setRep(""); }} className="flex h-8 items-center gap-1 rounded-md px-2 text-[12px] font-medium text-muted-foreground hover:text-foreground"><X className="size-3.5" />Clear</button>}
-        <div className="num ml-auto text-[12.5px] font-medium text-muted-foreground">{rows.length} leads</div>
+          <select className={cn(selectCls, "flex-1 sm:flex-initial min-w-[95px]")} value={priority} onChange={(e) => { setPriority(e.target.value); setPage(0); }}>
+            <option value="">Any priority</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
+          </select>
+          {admin && (
+            <select className={cn(selectCls, "flex-1 sm:flex-initial min-w-[95px]")} value={rep} onChange={(e) => { setRep(e.target.value); setPage(0); }}>
+              <option value="">All reps</option><option value="__none">Unassigned</option>
+              {salesReps.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          )}
+          {filtered && <button onClick={() => { setQ(""); setStatus(""); setPriority(""); setRep(""); }} className="flex h-8 items-center gap-1 rounded-md px-2 text-[12px] font-medium text-muted-foreground hover:text-foreground"><X className="size-3.5" />Clear</button>}
+          <div className="num ml-auto text-[12px] sm:text-[12.5px] font-medium text-muted-foreground whitespace-nowrap">{rows.length} leads</div>
+        </div>
       </div>
 
       {admin && sel.size > 0 && (
-        <div className="flex items-center gap-3 border-b border-border bg-primary/8 px-3 py-2 text-[12.5px] animate-rise">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 border-b border-border bg-primary/8 px-3 py-2 text-[12.5px] animate-rise">
           <span className="num font-semibold text-foreground">{sel.size} selected</span>
-          <select className={selectCls} value={bulkRep} onChange={(e) => setBulkRep(e.target.value)}>
+          <select className={cn(selectCls, "min-w-[120px]")} value={bulkRep} onChange={(e) => setBulkRep(e.target.value)}>
             <option value="" disabled>Assign to…</option>
             {salesReps.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
@@ -151,7 +153,14 @@ export function LeadTable({ leads, admin }: { leads: Lead[]; admin?: boolean }) 
               );
             })}
             {view.length === 0 && (
-              <tr><td colSpan={12} className="py-16 text-center"><div className="text-[14px] font-semibold text-foreground">No leads match these filters</div><div className="mt-1 text-[12.5px] text-muted-foreground">Try clearing a filter or searching another company.</div></td></tr>
+              <tr>
+                <td colSpan={12} className="py-16 text-center">
+                  <div className="sticky left-0 right-0 max-w-sm mx-auto px-4">
+                    <div className="text-[14px] font-semibold text-foreground">No leads match these filters</div>
+                    <div className="mt-1 text-[12.5px] text-muted-foreground">Try clearing a filter or searching another company.</div>
+                  </div>
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
@@ -275,9 +284,9 @@ function LeadDrawer({ lead, onClose, onSave }: { lead: Lead | null; onClose: () 
                 <span className="flex items-center gap-2"><Phone className="size-3.5 text-muted-foreground" /><span className="num">{lead.phone || "No phone"}</span></span>
                 <span className="flex items-center gap-2"><Mail className="size-3.5 text-muted-foreground" />{lead.email || "No email"}</span>
               </div>
-              <div className="space-y-3 rounded-md border border-border bg-background p-4">
+              <div className="space-y-3 rounded-md border border-border bg-background p-3.5 sm:p-4">
                 <div className="eyebrow">Update lead</div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <select className={selectCls} value={status} onChange={(e) => setStatus(e.target.value as any)}>
                     {LEAD_STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
                   </select>
@@ -286,7 +295,7 @@ function LeadDrawer({ lead, onClose, onSave }: { lead: Lead | null; onClose: () 
                   </select>
                   <input
                     type="datetime-local"
-                    className={selectCls}
+                    className={cn(selectCls, "w-full")}
                     value={followUp}
                     onChange={(e) => setFollowUp(e.target.value)}
                     aria-label="Next follow-up"
@@ -294,7 +303,7 @@ function LeadDrawer({ lead, onClose, onSave }: { lead: Lead | null; onClose: () 
                   <input
                     value={val}
                     onChange={(e) => setVal(e.target.value)}
-                    className={cn(selectCls, "num")}
+                    className={cn(selectCls, "num w-full")}
                     placeholder="Expected value"
                     aria-label="Expected value"
                   />

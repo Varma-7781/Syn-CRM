@@ -66,27 +66,29 @@ export function SalesCockpit() {
       sub={`${upcomingFollowUps.length} follow-up${upcomingFollowUps.length === 1 ? "" : "s"} scheduled · live quota tracking`}
     >
       {nextReminder ? (
-        <div className="panel flex flex-wrap items-center gap-4 border-primary/30 bg-primary/5 p-3.5 animate-rise">
-          <span className="flex size-9 items-center justify-center rounded-md bg-primary/15 text-primary">
+        <div className="panel flex flex-wrap items-center gap-3 sm:gap-4 border-primary/30 bg-primary/5 p-3 sm:p-3.5 animate-rise">
+          <span className="flex size-9 items-center justify-center rounded-md bg-primary/15 text-primary shrink-0">
             <Clock className="size-4" />
           </span>
           <div className="min-w-0 flex-1">
             <div className="text-[13.5px] font-semibold text-foreground">
               Call {nextReminder.lead.contactName || nextReminder.lead.client} · {nextReminder.lead.companyName || nextReminder.lead.company}
             </div>
-            <div className="text-[12.5px] text-muted-foreground">
+            <div className="text-[12.5px] text-muted-foreground truncate">
               {nextReminder.lead.requirement || "Scheduled follow-up"} · {nextReminder.lead.phone}
             </div>
           </div>
-          <span className="num rounded bg-background px-2.5 py-1 text-[13px] font-semibold text-primary ring-1 ring-primary/30">
-            in {nextReminder.minutesRemaining}m
-          </span>
-          <Button variant="outline" size="sm" onClick={handleDismissReminder}>
-            Dismiss
-          </Button>
-          <Button size="sm" onClick={handleMarkCalled}>
-            <PhoneCall className="size-3.5" /> Mark as called
-          </Button>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <span className="num rounded bg-background px-2.5 py-1 text-[13px] font-semibold text-primary ring-1 ring-primary/30">
+              in {nextReminder.minutesRemaining}m
+            </span>
+            <Button variant="outline" size="sm" onClick={handleDismissReminder}>
+              Dismiss
+            </Button>
+            <Button size="sm" onClick={handleMarkCalled}>
+              <PhoneCall className="size-3.5" /> Mark as called
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="panel flex items-center gap-3 border-border bg-surface px-4 py-3.5 text-[13.5px] font-medium text-muted-foreground">

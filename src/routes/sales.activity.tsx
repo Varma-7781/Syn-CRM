@@ -33,8 +33,8 @@ function SalesActivityLog() {
 
   return (
     <AppPage title="Recent Activity Log" sub="Chronological record of calls, emails, WhatsApp & meetings">
-      <div className="panel p-5">
-        <ol className="relative ml-3 space-y-6 border-l border-border">
+      <div className="panel p-4 sm:p-5">
+        <ol className="relative ml-2 sm:ml-3 space-y-6 border-l border-border">
           {userActs.map((a: any, i: number) => {
             const I = ACT_ICON[a.type] || StickyNote;
             const timeStr = a.t || (a.timestamp ? new Date(a.timestamp).toLocaleString() : "Recently");

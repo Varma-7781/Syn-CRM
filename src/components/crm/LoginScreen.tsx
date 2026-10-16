@@ -8,16 +8,16 @@ import { useCRM } from "@/context/CRMContext";
 export function LoginScreen() {
   const { theme, toggle } = useTheme();
   return (
-    <div className="relative min-h-screen lg:h-screen lg:min-h-0 lg:max-h-screen overflow-hidden bg-background lg:grid lg:grid-cols-[1.12fr_1fr]">
+    <div className="relative min-h-screen lg:h-screen lg:min-h-0 lg:max-h-screen overflow-x-hidden overflow-y-auto lg:overflow-hidden bg-background lg:grid lg:grid-cols-[1.12fr_1fr]">
       <BrandSide />
-      <div className="relative flex min-h-screen lg:min-h-0 lg:h-full lg:max-h-screen flex-col justify-between overflow-hidden bg-background">
+      <div className="relative flex min-h-screen lg:min-h-0 lg:h-full lg:max-h-screen flex-col justify-between overflow-x-hidden overflow-y-auto lg:overflow-hidden bg-background">
         {/* Full Business Doodle Pattern Background (Inspired by Zoopiter CRM) */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 z-0 login-doodle-bg"
         />
 
-        <div className="relative z-10 flex items-center justify-between px-5 pt-3.5 lg:justify-end lg:px-8 lg:pt-4">
+        <div className="relative z-10 flex items-center justify-between px-4 sm:px-5 pt-3.5 lg:justify-end lg:px-8 lg:pt-4">
           <div className="flex items-center gap-2.5 lg:hidden">
             <BrandMark className="size-9" />
             <div className="leading-none">
@@ -28,26 +28,26 @@ export function LoginScreen() {
           <button
             onClick={(e) => toggle(e)}
             aria-label="Toggle theme"
-            className="group relative flex size-8 items-center justify-center rounded-md border border-border bg-surface/80 backdrop-blur-sm text-muted-foreground transition-all duration-300 hover:text-foreground hover:scale-105 active:scale-95 shadow-xs"
+            className="group relative flex size-9 sm:size-8 items-center justify-center rounded-md border border-border bg-surface/80 backdrop-blur-sm text-muted-foreground transition-all duration-300 hover:text-foreground hover:scale-105 active:scale-95 shadow-xs"
             title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
           >
             <span className="transition-transform duration-500 ease-out group-hover:rotate-45">
               {theme === "dark" ? (
-                <Sun className="size-3.5 text-amber-400 transition-transform duration-300" />
+                <Sun className="size-4 sm:size-3.5 text-amber-400 transition-transform duration-300" />
               ) : (
-                <Moon className="size-3.5 text-sky-400 transition-transform duration-300 -rotate-12" />
+                <Moon className="size-4 sm:size-3.5 text-sky-400 transition-transform duration-300 -rotate-12" />
               )}
             </span>
           </button>
         </div>
         <MobileStrip />
-        <div className="relative z-10 flex flex-1 min-h-0 items-center justify-center px-4 py-2 sm:px-6">
+        <div className="relative z-10 flex flex-1 min-h-0 items-center justify-center px-3.5 sm:px-6 py-4 lg:py-2">
           {/* Floating Login Card Modal over the Doodle Background */}
-          <div className="w-full max-w-[415px] rounded-2xl border border-border/80 bg-surface/92 p-5 shadow-2xl backdrop-blur-xl sm:p-6 light:bg-white/94 light:border-border/70 light:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.18)]">
+          <div className="w-full max-w-[415px] rounded-2xl border border-border/80 bg-surface/92 p-4 sm:p-6 shadow-2xl backdrop-blur-xl light:bg-white/94 light:border-border/70 light:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.18)]">
             <LoginForm />
           </div>
         </div>
-        <footer className="relative z-10 flex items-center justify-between px-5 pb-3 text-[11px] font-medium text-muted-foreground lg:px-8 lg:pb-3.5">
+        <footer className="relative z-10 flex items-center justify-between px-4 sm:px-5 pb-3 pt-2 text-[11px] font-medium text-muted-foreground lg:px-8 lg:pb-3.5 lg:pt-0">
           <span>© 2026 SYNTRAXS Technologies</span>
           <span className="flex items-center gap-1.5"><ShieldCheck className="size-3 text-success" /> Encrypted session</span>
         </footer>
@@ -146,7 +146,12 @@ function LoginForm() {
         </Field>
 
         <Field id="pw" label="Password" icon={Lock} error={pwErr} trailing={
-          <button type="button" onClick={() => setShow((s) => !s)} aria-label={show ? "Hide password" : "Show password"} className="relative size-7 text-muted-foreground transition-colors hover:text-foreground">
+          <button
+            type="button"
+            onClick={() => setShow((s) => !s)}
+            aria-label={show ? "Hide password" : "Show password"}
+            className="relative flex size-8 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+          >
             <Eye className={cn("absolute inset-0 m-auto size-3.5 transition-all duration-200", show ? "scale-50 opacity-0" : "opacity-100")} />
             <EyeOff className={cn("absolute inset-0 m-auto size-3.5 transition-all duration-200", show ? "opacity-100" : "scale-50 opacity-0")} />
           </button>
@@ -165,7 +170,7 @@ function LoginForm() {
 
       <div className="mt-4 animate-rise" style={{ animationDelay: "600ms" }}>
         <button type="submit" disabled={loading}
-          className="group relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-md bg-primary text-[13.5px] font-semibold text-primary-foreground shadow-cta transition-all duration-200 hover:-translate-y-px hover:bg-primary-hover active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-90">
+          className="group relative flex h-11 sm:h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-md bg-primary text-[14px] sm:text-[13.5px] font-semibold text-primary-foreground shadow-cta transition-all duration-200 hover:-translate-y-px hover:bg-primary-hover active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-90">
           <span aria-hidden className="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-primary-foreground/15 to-transparent opacity-0 group-hover:opacity-100 group-hover:animate-scan" />
           {loading ? (<><Loader2 className="size-3.5 animate-spin" /> Signing in…</>) : (<>Sign In <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-1" /></>)}
         </button>

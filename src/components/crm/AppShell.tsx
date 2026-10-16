@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Activity, BarChart3, Bell, ChevronsUpDown, Command, FileBarChart, Gauge, LayoutDashboard,
@@ -51,6 +51,23 @@ export function AppShell({ role, children }: { role: "admin" | "sales"; children
   const [open, setOpen] = useState(false);
   const { theme, toggle } = useTheme();
 
+  // Prevent background scrolling and support Escape key when mobile drawer is open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape") setOpen(false);
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      return () => {
+        document.body.style.overflow = "";
+        window.removeEventListener("keydown", handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = "";
+    }
+  }, [open]);
+
   const normalizedPath = (path.replace(/\/$/, "") || "/").toLowerCase();
   const isMatch = (itemTo: string) => {
     const normTo = (itemTo.replace(/\/$/, "") || "/").toLowerCase();
@@ -70,7 +87,13 @@ export function AppShell({ role, children }: { role: "admin" | "sales"; children
     <div className="flex h-full flex-col">
       <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4">
         <Wordmark />
-        <button className="text-muted-foreground hover:text-foreground lg:hidden" onClick={() => setOpen(false)} aria-label="Close menu"><X className="size-4" /></button>
+        <button
+          className="flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-foreground lg:hidden transition-colors"
+          onClick={() => setOpen(false)}
+          aria-label="Close menu"
+        >
+          <X className="size-5" />
+        </button>
       </div>
       <nav className="flex-1 space-y-5 overflow-y-auto px-2.5 py-4">
         {nav.map((g) => (
@@ -82,11 +105,11 @@ export function AppShell({ role, children }: { role: "admin" | "sales"; children
                 return (
                   <li key={it.to}>
                     <Link to={it.to} onClick={() => setOpen(false)}
-                      className={cn("group relative flex h-8.5 items-center gap-2.5 rounded-md px-2.5 text-[13.5px] font-medium transition-colors",
+                      className={cn("group relative flex h-9 items-center gap-2.5 rounded-md px-2.5 text-[13.5px] font-medium transition-colors",
                         active ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold" : "text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground")}>
                       {active && <span className="absolute -left-2.5 top-1.5 bottom-1.5 w-[2.5px] rounded-r bg-primary" />}
-                      <it.icon className={cn("size-4", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-                      {it.title}
+                      <it.icon className={cn("size-4 shrink-0", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+                      <span className="truncate">{it.title}</span>
                     </Link>
                   </li>
                 );
@@ -127,20 +150,26 @@ export function AppShell({ role, children }: { role: "admin" | "sales"; children
       />
 
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 border-r border-sidebar-border bg-sidebar lg:block">{sidebar}</aside>
-      {open && <div className="fixed inset-0 z-40 bg-background/70 backdrop-blur-sm lg:hidden" onClick={() => setOpen(false)} />}
-      <aside className={cn("fixed inset-y-0 left-0 z-50 w-72 border-r border-sidebar-border bg-sidebar transition-transform duration-300 lg:hidden", open ? "translate-x-0" : "-translate-x-full")}>{sidebar}</aside>
+      {open && <div className="fixed inset-0 z-40 bg-background/70 backdrop-blur-sm lg:hidden transition-opacity" onClick={() => setOpen(false)} />}
+      <aside className={cn("fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] border-r border-sidebar-border bg-sidebar shadow-2xl transition-transform duration-300 ease-[var(--ease-out)] lg:hidden", open ? "translate-x-0" : "-translate-x-full")}>{sidebar}</aside>
 
       <div className="relative z-10 lg:pl-60">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur-md lg:px-6">
-          <button className="text-muted-foreground hover:text-foreground lg:hidden" onClick={() => setOpen(true)} aria-label="Open menu"><Menu className="size-5" /></button>
-          <div className="flex min-w-0 items-center gap-2 text-[13.5px]">
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-2.5 sm:gap-3 border-b border-border bg-background/85 px-3.5 sm:px-4 backdrop-blur-md lg:px-6">
+          <button
+            className="flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground lg:hidden transition-colors shrink-0"
+            onClick={() => setOpen(true)}
+            aria-label="Open menu"
+          >
+            <Menu className="size-5" />
+          </button>
+          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2 text-[13.5px]">
             <span className="hidden font-medium text-muted-foreground sm:inline">{role === "admin" ? "Management" : "Sales"}</span>
             <span className="hidden font-semibold text-border-strong sm:inline">/</span>
-            <span className="truncate font-semibold text-foreground text-[14px]">
+            <span className="truncate font-semibold text-foreground text-[13.5px] sm:text-[14px]">
               {current?.title || (role === "admin" ? "Executive Overview" : "My Lead Pipeline")}
             </span>
           </div>
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ml-auto flex items-center gap-1.5 shrink-0">
             <label className="hidden h-8 w-64 items-center gap-2 rounded-md border border-border bg-surface px-2.5 text-[13px] text-muted-foreground transition-colors focus-within:border-primary md:flex">
               <Search className="size-3.5 text-muted-foreground" />
               <input placeholder="Search leads, companies…" className="w-full bg-transparent text-foreground outline-none placeholder:text-muted-foreground" />
@@ -162,13 +191,19 @@ export function AppShell({ role, children }: { role: "admin" | "sales"; children
               </span>
             </button>
             {currentUser?.role === "admin" && role === "sales" && (
-              <Link to="/admin/overview" className="flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-[12px] font-medium text-muted-foreground hover:text-foreground transition-colors">
-                Admin overview <ChevronsUpDown className="size-3" />
+              <Link
+                to="/admin/overview"
+                className="flex h-8 items-center gap-1 sm:gap-1.5 rounded-md border border-border px-2 sm:px-2.5 text-[11.5px] sm:text-[12px] font-medium text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                title="Switch to Admin Overview"
+              >
+                <span className="hidden sm:inline">Admin overview</span>
+                <span className="sm:hidden font-semibold">Admin</span>
+                <ChevronsUpDown className="size-3" />
               </Link>
             )}
           </div>
         </header>
-        <main className="mx-auto w-full max-w-[1480px] space-y-5 p-4 lg:p-6">{children}</main>
+        <main className="mx-auto w-full max-w-[1480px] space-y-5 p-3.5 sm:p-4 lg:p-6">{children}</main>
       </div>
     </div>
   );
@@ -197,7 +232,7 @@ function NotificationBell() {
           </span>
         )}
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-88 border-border bg-popover p-0 shadow-pop">
+      <PopoverContent align="end" className="w-[calc(100vw-1.5rem)] sm:w-88 max-w-[360px] border-border bg-popover p-0 shadow-pop">
         <div className="flex items-center justify-between border-b border-border px-3.5 py-2.5">
           <span className="text-[13.5px] font-semibold text-foreground">Follow-ups & Alerts</span>
           {overdueFollowUps.length > 0 && (

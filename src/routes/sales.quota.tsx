@@ -81,34 +81,36 @@ function Quota() {
         </div>
       </Section>
       <Section title="History" bodyClass="p-0">
-        <table className="w-full text-[13px]">
-          <thead>
-            <tr className="border-b border-border text-left text-[11.5px] font-semibold uppercase tracking-wider text-muted-foreground">
-              <th className="px-4 py-2.5 font-semibold">Period</th>
-              <th className="px-2 py-2.5 text-right font-semibold">Target</th>
-              <th className="px-2 py-2.5 text-right font-semibold">Achieved</th>
-              <th className="w-[35%] px-4 py-2.5 font-semibold">Performance</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y border-border">
-            {[...history].reverse().map((q, i) => {
-              const p = q.target > 0 ? Math.round((q.achieved / q.target) * 100) : 0;
-              return (
-                <tr key={q.period + i} className="hover:bg-secondary/40 transition-colors">
-                  <td className="num px-4 py-2.5 font-medium text-foreground">{q.period}</td>
-                  <td className="num px-2 text-right font-medium text-muted-foreground">{inr(q.target)}</td>
-                  <td className="num px-2 text-right font-semibold text-foreground">{inr(q.achieved)}</td>
-                  <td className="px-4">
-                    <div className="flex items-center gap-3">
-                      <Meter value={p} tone={p >= 100 ? "success" : "primary"} />
-                      <span className="num w-10 text-right text-[12.5px] font-semibold text-foreground">{p}%</span>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[460px] text-[13px]">
+            <thead>
+              <tr className="border-b border-border text-left text-[11.5px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <th className="px-4 py-2.5 font-semibold">Period</th>
+                <th className="px-2 py-2.5 text-right font-semibold">Target</th>
+                <th className="px-2 py-2.5 text-right font-semibold">Achieved</th>
+                <th className="w-[35%] px-4 py-2.5 font-semibold">Performance</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y border-border">
+              {[...history].reverse().map((q, i) => {
+                const p = q.target > 0 ? Math.round((q.achieved / q.target) * 100) : 0;
+                return (
+                  <tr key={q.period + i} className="hover:bg-secondary/40 transition-colors">
+                    <td className="num px-4 py-2.5 font-medium text-foreground">{q.period}</td>
+                    <td className="num px-2 text-right font-medium text-muted-foreground">{inr(q.target)}</td>
+                    <td className="num px-2 text-right font-semibold text-foreground">{inr(q.achieved)}</td>
+                    <td className="px-4">
+                      <div className="flex items-center gap-3">
+                        <Meter value={p} tone={p >= 100 ? "success" : "primary"} />
+                        <span className="num w-10 text-right text-[12.5px] font-semibold text-foreground">{p}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </Section>
     </AppPage>
   );

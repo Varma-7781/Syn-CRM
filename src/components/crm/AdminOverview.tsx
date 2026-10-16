@@ -122,34 +122,36 @@ export function AdminOverview() {
           action={<Link to="/admin/team" className="flex items-center gap-1 text-[12px] font-medium text-primary hover:underline">Team view <ArrowRight className="size-3" /></Link>}
           bodyClass="p-0"
         >
-          <table className="w-full text-[13px]">
-            <thead>
-              <tr className="border-b border-border text-left text-[11.5px] font-semibold uppercase tracking-wider text-muted-foreground">
-                <th className="px-4 py-2.5 font-semibold">Rep</th>
-                <th className="px-2 py-2.5 text-right font-semibold">Target</th>
-                <th className="px-2 py-2.5 text-right font-semibold">Achieved</th>
-                <th className="w-[35%] px-4 py-2.5 font-semibold">Realization</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y border-border">
-              {scorecard.map((r) => {
-                const p = r.target > 0 ? Math.round((r.achieved / r.target) * 100) : 0;
-                return (
-                  <tr key={r.name} className="hover:bg-secondary/40 transition-colors">
-                    <td className="px-4 py-2.5"><span className="flex items-center gap-2.5 text-foreground"><Avatar name={r.name} /><span className="font-semibold text-foreground text-[13.5px]">{r.name}</span></span></td>
-                    <td className="num px-2 text-right font-medium text-muted-foreground">{inr(r.target)}</td>
-                    <td className="num px-2 text-right font-semibold text-foreground">{inr(r.achieved)}</td>
-                    <td className="px-4">
-                      <div className="flex items-center gap-3">
-                        <Meter value={p} tone={p >= 100 ? "success" : p >= 70 ? "primary" : "warning"} />
-                        <span className="num w-10 text-right text-[12.5px] font-semibold text-foreground">{p}%</span>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[480px] text-[13px]">
+              <thead>
+                <tr className="border-b border-border text-left text-[11.5px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-2.5 font-semibold">Rep</th>
+                  <th className="px-2 py-2.5 text-right font-semibold">Target</th>
+                  <th className="px-2 py-2.5 text-right font-semibold">Achieved</th>
+                  <th className="w-[35%] px-4 py-2.5 font-semibold">Realization</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y border-border">
+                {scorecard.map((r) => {
+                  const p = r.target > 0 ? Math.round((r.achieved / r.target) * 100) : 0;
+                  return (
+                    <tr key={r.name} className="hover:bg-secondary/40 transition-colors">
+                      <td className="px-4 py-2.5"><span className="flex items-center gap-2.5 text-foreground"><Avatar name={r.name} /><span className="font-semibold text-foreground text-[13.5px]">{r.name}</span></span></td>
+                      <td className="num px-2 text-right font-medium text-muted-foreground">{inr(r.target)}</td>
+                      <td className="num px-2 text-right font-semibold text-foreground">{inr(r.achieved)}</td>
+                      <td className="px-4">
+                        <div className="flex items-center gap-3">
+                          <Meter value={p} tone={p >= 100 ? "success" : p >= 70 ? "primary" : "warning"} />
+                          <span className="num w-10 text-right text-[12.5px] font-semibold text-foreground">{p}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </Section>
         <Section title="Recent pipeline engagements" bodyClass="p-0">
           <ActivityList items={activities.length > 0 ? activities : undefined} />

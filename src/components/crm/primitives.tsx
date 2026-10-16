@@ -90,13 +90,13 @@ export function Delta({ v }: { v: number }) {
 /** A KPI cell meant to live inside a shared strip, not a standalone card. */
 export function Kpi({ label, value, delta, context, children }: { label: string; value: ReactNode; delta?: number; context?: string; children?: ReactNode }) {
   return (
-    <div className="flex flex-col gap-2 p-4">
-      <div className="eyebrow">{label}</div>
-      <div className="flex items-baseline gap-2">
-        <span className="num text-[26px] sm:text-[28px] font-semibold leading-none text-foreground">{value}</span>
+    <div className="flex flex-col gap-1.5 sm:gap-2 p-3 sm:p-4 min-w-0">
+      <div className="eyebrow truncate">{label}</div>
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className="num text-[22px] sm:text-[26px] lg:text-[28px] font-semibold leading-none text-foreground truncate">{value}</span>
         {delta !== undefined && <Delta v={delta} />}
       </div>
-      {context && <div className="text-[12.5px] sm:text-[13px] text-muted-foreground font-normal leading-tight">{context}</div>}
+      {context && <div className="text-[12px] sm:text-[13px] text-muted-foreground font-normal leading-tight line-clamp-2">{context}</div>}
       {children}
     </div>
   );
@@ -104,7 +104,11 @@ export function Kpi({ label, value, delta, context, children }: { label: string;
 
 export function KpiStrip({ children, cols = 4 }: { children: ReactNode; cols?: number }) {
   return (
-    <div className={cn("panel grid grid-cols-2 divide-border overflow-hidden max-lg:[&>*:nth-child(n+3)]:border-t lg:divide-x", cols === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4", "max-lg:[&>*:nth-child(even)]:border-l")}>
+    <div className={cn(
+      "panel grid grid-cols-2 divide-border overflow-hidden max-lg:[&>*:nth-child(n+3)]:border-t lg:divide-x max-lg:[&>*:last-child:nth-child(odd)]:col-span-2",
+      cols === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4",
+      "max-lg:[&>*:nth-child(even)]:border-l"
+    )}>
       {children}
     </div>
   );
@@ -112,15 +116,15 @@ export function KpiStrip({ children, cols = 4 }: { children: ReactNode; cols?: n
 
 export function Section({ title, sub, action, children, className, bodyClass }: { title: string; sub?: string; action?: ReactNode; children: ReactNode; className?: string; bodyClass?: string }) {
   return (
-    <section className={cn("panel flex flex-col", className)}>
-      <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-        <div>
-          <h2 className="text-[15px] sm:text-[16px] font-semibold text-foreground tracking-tight">{title}</h2>
-          {sub && <p className="mt-0.5 text-[13px] text-muted-foreground leading-normal">{sub}</p>}
+    <section className={cn("panel flex flex-col min-w-0", className)}>
+      <header className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 border-b border-border px-3.5 sm:px-4 py-2.5 sm:py-3">
+        <div className="min-w-0">
+          <h2 className="text-[14.5px] sm:text-[16px] font-semibold text-foreground tracking-tight truncate">{title}</h2>
+          {sub && <p className="mt-0.5 text-[12.5px] sm:text-[13px] text-muted-foreground leading-normal">{sub}</p>}
         </div>
-        {action}
+        {action && <div className="shrink-0">{action}</div>}
       </header>
-      <div className={cn("flex-1", bodyClass ?? "p-4")}>{children}</div>
+      <div className={cn("flex-1 min-w-0", bodyClass ?? "p-3.5 sm:p-4")}>{children}</div>
     </section>
   );
 }
@@ -143,10 +147,10 @@ export { useTheme, ThemeProvider } from "@/context/ThemeContext";
 
 export function PageHeader({ title, sub, actions }: { title: string; sub?: string; actions?: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 className="text-[26px] sm:text-[28px] font-bold tracking-tight text-foreground leading-tight">{title}</h1>
-        {sub && <p className="mt-1 text-[13.5px] sm:text-[14px] text-muted-foreground leading-relaxed">{sub}</p>}
+    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+      <div className="min-w-0">
+        <h1 className="text-[22px] sm:text-[26px] lg:text-[28px] font-bold tracking-tight text-foreground leading-tight">{title}</h1>
+        {sub && <p className="mt-1 text-[13px] sm:text-[14px] text-muted-foreground leading-relaxed">{sub}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
