@@ -3,12 +3,13 @@ import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Activity, BarChart3, Bell, ChevronsUpDown, Command, FileBarChart, Gauge, LayoutDashboard,
   LogOut, Menu, Moon, Search, Sun, Target, Trophy, Users, Workflow, X, Clock, AlertTriangle,
-  Volume2, Lightbulb,
+  Volume2, Lightbulb, Play, Check, Settings, Sparkles, Phone, ExternalLink,
 } from "lucide-react";
 import { Avatar, Wordmark, useTheme } from "./primitives";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { soundService, SOUND_PRESETS, SoundPreset } from "@/utils/soundService";
 
 type Item = { title: string; to: string; icon: typeof Gauge };
 type Group = { label?: string; items: Item[] };
@@ -213,10 +214,34 @@ export function AppShell({ role, children }: { role: "admin" | "sales"; children
 }
 
 function NotificationBell() {
-  const { upcomingFollowUps, overdueFollowUps, interestedLeads, updateLead, currentUser, playNotificationSound } = useCRM();
+  const { upcomingFollowUps, overdueFollowUps, interestedLeads, updateLead, currentUser } = useCRM();
   const isAdmin = currentUser?.role === "admin";
   const interestList = isAdmin ? interestedLeads : [];
   const totalCount = upcomingFollowUps.length + overdueFollowUps.length + interestList.length;
+
+  const [activeTab, setActiveTab] = useState<"all" | "interested" | "followups" | "sounds">("all");
+  const [showAllItems, setShowAllItems] = useState(false);
+  const [selectedSound, setSelectedSound] = useState(() => soundService.getSelectedPresetId());
+  const [playingPresetId, setPlayingPresetId] = useState<string | null>(null);
+
+  const handleSelectSound = (presetId: string, presetName: string, icon: string) => {
+    soundService.setSelectedPresetId(presetId);
+    setSelectedSound(presetId);
+    soundService.playPreset(presetId);
+    setPlayingPresetId(presetId);
+    setTimeout(() => setPlayingPresetId(null), 1200);
+    toast.success(`Active tone set: ${icon} ${presetName}`, {
+      description: "Incoming 'Interested' leads will now play this sound alert.",
+      duration: 3500,
+    });
+  };
+
+  const handlePreviewSound = (e: React.MouseEvent, presetId: string) => {
+    e.stopPropagation();
+    soundService.playPreset(presetId);
+    setPlayingPresetId(presetId);
+    setTimeout(() => setPlayingPresetId(null), 1200);
+  };
 
   const handleClearAllOverdue = () => {
     overdueFollowUps.forEach((item) => {
@@ -225,147 +250,359 @@ function NotificationBell() {
         followUpCompletedAt: new Date().toISOString(),
       });
     });
+    toast.success("All overdue follow-ups cleared");
   };
 
-  const handleTestSound = () => {
-    playNotificationSound();
-    toast.info("Testing notification chime sound 🔔");
-  };
+  // Compile unified list of notifications
+  const allNotifications = [
+    ...interestList.map((lead) => ({
+      type: "interested" as const,
+      id: `interest-${lead.id}`,
+      lead,
+      title: lead.companyName || lead.company || "Unknown Company",
+      subtitle: `${lead.contactName || lead.client || "Client"} · ${lead.phone || "No phone"}`,
+      rep: lead.interestedByName || lead.rep || lead.assignedToName || "Sales Rep",
+      time: lead.interestedAt
+        ? new Date(lead.interestedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : "Recent",
+      rawTime: lead.interestedAt ? new Date(lead.interestedAt).getTime() : 0,
+    })),
+    ...upcomingFollowUps.map(({ lead, minutesRemaining }) => ({
+      type: "upcoming" as const,
+      id: `upcoming-${lead.id}`,
+      lead,
+      title: lead.companyName || lead.company || "Unknown Company",
+      subtitle: `${lead.contactName || lead.client || "Client"} · ${lead.phone || "No phone"}`,
+      rep: lead.rep || lead.assignedToName || "Assigned Rep",
+      time: `in ${minutesRemaining}m`,
+      rawTime: lead.nextFollowUp ? new Date(lead.nextFollowUp).getTime() : Date.now(),
+    })),
+    ...overdueFollowUps.map(({ lead, reason }) => ({
+      type: "overdue" as const,
+      id: `overdue-${lead.id}`,
+      lead,
+      title: lead.companyName || lead.company || "Unknown Company",
+      subtitle: `Overdue (${reason === "dismissed" ? "Dismissed" : "No action"})`,
+      rep: lead.rep || lead.assignedToName || "Assigned Rep",
+      time: "Overdue",
+      rawTime: 0,
+    })),
+  ];
+
+  // Filter based on active tab
+  const filteredNotifications = allNotifications.filter((item) => {
+    if (activeTab === "all") return true;
+    if (activeTab === "interested") return item.type === "interested";
+    if (activeTab === "followups") return item.type === "upcoming" || item.type === "overdue";
+    return true;
+  });
+
+  // Limit display to 5-6 notifications unless user clicks "Show all"
+  const DISPLAY_LIMIT = 6;
+  const visibleNotifications = showAllItems
+    ? filteredNotifications
+    : filteredNotifications.slice(0, DISPLAY_LIMIT);
 
   return (
     <Popover>
-      <PopoverTrigger className="relative flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground" aria-label="Notifications">
+      <PopoverTrigger
+        className="relative flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+        aria-label="Notifications"
+      >
         <Bell className="size-4" />
         {totalCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white ring-2 ring-background">
+          <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white ring-2 ring-background animate-pulse">
             {totalCount > 9 ? "9+" : totalCount}
           </span>
         )}
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[calc(100vw-1.5rem)] sm:w-96 max-w-[390px] border-border bg-popover p-0 shadow-pop">
-        <div className="flex items-center justify-between border-b border-border px-3.5 py-2.5">
-          <span className="text-[13.5px] font-semibold text-foreground flex items-center gap-1.5">
-            Notifications
-            {interestList.length > 0 && (
-              <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10.5px] font-bold text-amber-600 dark:text-amber-400">
-                {interestList.length} Interested
+      <PopoverContent
+        align="end"
+        className="w-[calc(100vw-1.5rem)] sm:w-[420px] max-w-[420px] border-border bg-popover p-0 shadow-2xl rounded-xl overflow-hidden"
+      >
+        {/* Header with Notification Title and Quick Sound Preview */}
+        <div className="flex items-center justify-between border-b border-border bg-surface/50 px-3.5 py-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-[13.5px] font-bold text-foreground">Notifications</span>
+            {totalCount > 0 && (
+              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                {totalCount}
               </span>
             )}
-          </span>
-          <div className="flex items-center gap-2">
+          </div>
+          <div className="flex items-center gap-1.5">
             <button
-              onClick={handleTestSound}
+              onClick={() => {
+                soundService.playPreset(selectedSound);
+                toast.info(`Playing active sound: ${SOUND_PRESETS.find((p) => p.id === selectedSound)?.name || "Chime"} 🔔`);
+              }}
               type="button"
-              className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-secondary"
-              title="Test the notification chime sound"
+              className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/60 hover:bg-secondary"
+              title="Test current alert sound"
             >
-              <Volume2 className="size-3" />
+              <Volume2 className="size-3.5 text-primary" />
               <span>Test sound</span>
             </button>
             {overdueFollowUps.length > 0 && (
-              <button onClick={handleClearAllOverdue} className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors">
+              <button
+                onClick={handleClearAllOverdue}
+                className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors px-1.5 py-1 rounded hover:bg-secondary"
+              >
                 Clear overdue
               </button>
             )}
           </div>
         </div>
-        <div className="max-h-84 overflow-y-auto divide-y divide-border">
-          {totalCount === 0 ? (
-            <div className="py-6 text-center text-[13px] text-muted-foreground">
+
+        {/* Filter Navigation Tabs */}
+        <div className="flex items-center gap-1 border-b border-border bg-muted/20 px-2 py-1.5 text-[12px] font-medium overflow-x-auto">
+          <button
+            onClick={() => setActiveTab("all")}
+            className={cn(
+              "flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors shrink-0",
+              activeTab === "all"
+                ? "bg-background text-foreground font-semibold shadow-xs"
+                : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+            )}
+          >
+            All
+            <span className="text-[10px] opacity-70">({allNotifications.length})</span>
+          </button>
+          {interestList.length > 0 && (
+            <button
+              onClick={() => setActiveTab("interested")}
+              className={cn(
+                "flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors shrink-0",
+                activeTab === "interested"
+                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+              )}
+            >
+              <Lightbulb className="size-3 text-amber-500" />
+              Interested
+              <span className="text-[10px] font-bold">({interestList.length})</span>
+            </button>
+          )}
+          {(upcomingFollowUps.length > 0 || overdueFollowUps.length > 0) && (
+            <button
+              onClick={() => setActiveTab("followups")}
+              className={cn(
+                "flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors shrink-0",
+                activeTab === "followups"
+                  ? "bg-background text-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+              )}
+            >
+              <Clock className="size-3 text-primary" />
+              Follow-ups
+              <span className="text-[10px] opacity-70">
+                ({upcomingFollowUps.length + overdueFollowUps.length})
+              </span>
+            </button>
+          )}
+          <button
+            onClick={() => setActiveTab("sounds")}
+            className={cn(
+              "ml-auto flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors shrink-0",
+              activeTab === "sounds"
+                ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                : "text-primary hover:bg-primary/10"
+            )}
+            title="Choose from 6 notification sounds"
+          >
+            <Settings className="size-3" />
+            <span>Sound Options (6)</span>
+          </button>
+        </div>
+
+        {/* Content Area */}
+        <div className="max-h-[380px] overflow-y-auto divide-y divide-border">
+          {/* TAB 1: Sound Settings / 6 Sound Options */}
+          {activeTab === "sounds" ? (
+            <div className="p-3 space-y-2.5">
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/60">
+                <div>
+                  <div className="text-[12.5px] font-bold text-foreground flex items-center gap-1.5">
+                    <Sparkles className="size-3.5 text-amber-500" />
+                    Select Alert Sound (6 Options)
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Choose the alert chime played when sales marks client interest
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                {SOUND_PRESETS.map((preset) => {
+                  const isSelected = selectedSound === preset.id;
+                  const isPlaying = playingPresetId === preset.id;
+                  return (
+                    <div
+                      key={preset.id}
+                      onClick={() => handleSelectSound(preset.id, preset.name, preset.icon)}
+                      className={cn(
+                        "group flex items-center justify-between gap-2.5 p-2 rounded-lg border transition-all cursor-pointer text-left",
+                        isSelected
+                          ? "border-primary/50 bg-primary/5 shadow-xs"
+                          : "border-border/60 hover:border-border hover:bg-secondary/40"
+                      )}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="text-lg select-none shrink-0">{preset.icon}</span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[12.5px] font-semibold text-foreground truncate">
+                              {preset.name}
+                            </span>
+                            {isSelected && (
+                              <span className="flex items-center gap-0.5 rounded-full bg-primary/15 text-primary text-[10px] font-bold px-1.5 py-0.2">
+                                <Check className="size-2.5" /> Active
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-muted-foreground truncate">
+                            {preset.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => handlePreviewSound(e, preset.id)}
+                          className={cn(
+                            "flex size-7 items-center justify-center rounded-md border text-xs transition-transform active:scale-90",
+                            isPlaying
+                              ? "bg-primary text-primary-foreground border-primary scale-105"
+                              : "border-border bg-surface text-muted-foreground hover:text-foreground hover:bg-secondary"
+                          )}
+                          title={`Preview ${preset.name}`}
+                          aria-label={`Preview ${preset.name}`}
+                        >
+                          <Play className={cn("size-3", isPlaying && "animate-spin")} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="pt-2 text-center text-[11px] text-muted-foreground border-t border-border/40">
+                🔊 Audio works 100% in browser and saves your choice automatically.
+              </div>
+            </div>
+          ) : visibleNotifications.length === 0 ? (
+            <div className="py-8 text-center text-[13px] text-muted-foreground">
               No pending notifications
             </div>
           ) : (
             <>
-              {/* Interested Clients Section for Admin */}
-              {interestList.length > 0 && (
-                <div className="bg-amber-500/5 divide-y divide-border">
-                  <div className="px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1">
-                    <Lightbulb className="size-3" /> Interested Clients ({interestList.length})
-                  </div>
-                  {interestList.slice(0, 10).map((lead) => {
-                    const comp = lead.companyName || lead.company;
-                    const client = lead.contactName || lead.client;
-                    const rep = lead.interestedByName || lead.rep || lead.assignedToName || 'Sales Rep';
-                    const timeStr = lead.interestedAt
-                      ? new Date(lead.interestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                      : '';
-                    return (
-                      <div key={lead.id} className="flex items-start gap-2.5 px-3.5 py-2.5 hover:bg-amber-500/10 transition-colors">
-                        <div className="mt-0.5 size-5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                          <Lightbulb className="size-3" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="truncate text-[13px] font-semibold text-foreground">
-                              {comp}
-                            </span>
-                            {timeStr && (
-                              <span className="num text-[10.5px] text-muted-foreground shrink-0">
-                                {timeStr}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[12px] text-muted-foreground truncate">
-                            {client} · {lead.phone || lead.email || 'No phone'}
-                          </div>
-                          <div className="mt-0.5 text-[11.5px] font-medium text-amber-700 dark:text-amber-300">
-                            Marked Interested by <span className="font-semibold">{rep}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Upcoming Follow-ups */}
-              {upcomingFollowUps.map(({ lead, minutesRemaining }) => (
-                <div key={lead.id} className="flex items-start gap-2.5 px-3.5 py-2.5 hover:bg-secondary/60">
-                  <Clock className="mt-0.5 size-3.5 text-primary shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13px] font-semibold text-foreground">
-                      {lead.companyName || lead.company}
-                    </div>
-                    <div className="text-[12px] text-muted-foreground truncate">
-                      {lead.contactName || lead.client} · {lead.phone}
-                    </div>
-                  </div>
-                  <span className="num text-[11.5px] font-semibold text-primary shrink-0">
-                    in {minutesRemaining}m
-                  </span>
-                </div>
-              ))}
-
-              {/* Overdue Follow-ups */}
-              {overdueFollowUps.map(({ lead, reason }) => (
-                <div key={lead.id} className="flex items-start gap-2.5 px-3.5 py-2.5 hover:bg-secondary/60 bg-destructive/5">
-                  <AlertTriangle className="mt-0.5 size-3.5 text-destructive shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13px] font-semibold text-foreground">
-                      {lead.companyName || lead.company}
-                    </div>
-                    <div className="text-[12px] text-destructive font-medium truncate">
-                      Overdue ({reason === "dismissed" ? "Dismissed" : "No action"})
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      updateLead(lead.id, {
-                        followUpStatus: "completed",
-                        followUpCompletedAt: new Date().toISOString(),
-                      });
-                    }}
-                    className="text-[11px] text-muted-foreground hover:text-foreground shrink-0 p-1"
-                    title="Mark resolved"
+              {/* Notification Items List */}
+              {visibleNotifications.map((item) => {
+                const lead = item.lead;
+                return (
+                  <div
+                    key={item.id}
+                    className={cn(
+                      "flex items-start gap-2.5 px-3.5 py-2.5 transition-colors",
+                      item.type === "interested"
+                        ? "bg-amber-500/5 hover:bg-amber-500/10"
+                        : item.type === "overdue"
+                        ? "bg-destructive/5 hover:bg-destructive/10"
+                        : "hover:bg-secondary/60"
+                    )}
                   >
-                    <X className="size-3" />
-                  </button>
-                </div>
-              ))}
+                    {/* Status Icon */}
+                    <div
+                      className={cn(
+                        "mt-0.5 size-6 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold",
+                        item.type === "interested"
+                          ? "bg-amber-500/20 text-amber-600 dark:text-amber-400"
+                          : item.type === "overdue"
+                          ? "bg-destructive/15 text-destructive"
+                          : "bg-primary/15 text-primary"
+                      )}
+                    >
+                      {item.type === "interested" ? (
+                        <Lightbulb className="size-3.5" />
+                      ) : item.type === "overdue" ? (
+                        <AlertTriangle className="size-3.5" />
+                      ) : (
+                        <Clock className="size-3.5" />
+                      )}
+                    </div>
+
+                    {/* Notification Details */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span className="truncate text-[13px] font-semibold text-foreground">
+                          {item.title}
+                        </span>
+                        <span className="num text-[10.5px] text-muted-foreground shrink-0 font-medium">
+                          {item.time}
+                        </span>
+                      </div>
+                      <div className="text-[12px] text-muted-foreground truncate">
+                        {item.subtitle}
+                      </div>
+
+                      {item.type === "interested" && (
+                        <div className="mt-1 flex items-center justify-between gap-1">
+                          <span className="text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                            Marked Interested by <strong className="font-semibold">{item.rep}</strong>
+                          </span>
+                          {lead.phone && (
+                            <a
+                              href={`tel:${lead.phone}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-[11px] text-primary hover:underline flex items-center gap-0.5 font-medium shrink-0"
+                            >
+                              <Phone className="size-2.5" /> Call
+                            </a>
+                          )}
+                        </div>
+                      )}
+
+                      {item.type === "overdue" && (
+                        <div className="mt-1 flex items-center justify-end">
+                          <button
+                            onClick={() => {
+                              updateLead(lead.id, {
+                                followUpStatus: "completed",
+                                followUpCompletedAt: new Date().toISOString(),
+                              });
+                              toast.success("Follow-up marked resolved");
+                            }}
+                            className="text-[10.5px] font-semibold text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded bg-secondary/80 hover:bg-secondary transition-colors"
+                          >
+                            Mark resolved
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </>
           )}
         </div>
+
+        {/* Footer / Pagination Controls if more than 5-6 notifications */}
+        {activeTab !== "sounds" && filteredNotifications.length > DISPLAY_LIMIT && (
+          <div className="flex items-center justify-between border-t border-border bg-muted/20 px-3.5 py-2 text-[11.5px]">
+            <span className="text-muted-foreground">
+              Showing {visibleNotifications.length} of {filteredNotifications.length} notifications
+            </span>
+            <button
+              onClick={() => setShowAllItems(!showAllItems)}
+              className="font-semibold text-primary hover:underline flex items-center gap-0.5"
+            >
+              {showAllItems ? "Show top 6 only" : `View all (${filteredNotifications.length})`}
+            </button>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );
 }
+
