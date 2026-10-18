@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useRef, type FormEvent } from "react";
 import { ArrowRight, Eye, EyeOff, Lock, Mail, ShieldCheck, Loader2, Moon, Sun, AlertCircle } from "lucide-react";
-import { BrandMark, useTheme } from "@/components/crm/primitives";
+import { BrandMark, Wordmark, useTheme } from "@/components/crm/primitives";
 import { cn } from "@/lib/utils";
 import { useCRM } from "@/context/CRMContext";
 
@@ -18,12 +18,8 @@ export function LoginScreen() {
         />
 
         <div className="relative z-10 flex items-center justify-between px-4 sm:px-5 pt-3.5 lg:justify-end lg:px-8 lg:pt-4">
-          <div className="flex items-center gap-2.5 lg:hidden">
-            <BrandMark className="size-9" />
-            <div className="leading-none">
-              <div className="text-[14px] font-semibold tracking-[0.14em]">SYNTRA<span className="text-primary">X</span>S</div>
-              <div className="mt-1 text-[9.5px] font-semibold tracking-[0.32em] text-muted-foreground">TECHNOLOGIES</div>
-            </div>
+          <div className="flex items-center lg:hidden">
+            <Wordmark size="md" />
           </div>
           <button
             onClick={(e) => toggle(e)}
@@ -279,12 +275,8 @@ function BrandSide() {
 
       <div className="relative z-10 flex h-full flex-col justify-between px-8 py-4 xl:px-14 xl:py-6">
         <div>
-          <div className="flex items-center gap-3 self-start animate-rise">
-            <BrandMark className="size-9 shadow-sm" />
-            <div className="leading-tight">
-              <div className="text-[17px] font-bold tracking-[0.16em] text-foreground">SYNTRA<span className="text-primary">X</span>S</div>
-              <div className="text-[9px] font-semibold tracking-[0.34em] text-muted-foreground">TECHNOLOGIES</div>
-            </div>
+          <div className="animate-rise self-start pb-2">
+            <Wordmark size="lg" />
           </div>
           <div className="mt-3.5 max-w-[500px] animate-rise xl:mt-6" style={{ animationDelay: "120ms" }}>
             <h2 className="text-[26px] font-semibold leading-[1.08] tracking-[-0.03em] text-foreground xl:text-[36px]">

@@ -7,12 +7,12 @@ export function BrandMark({ className }: { className?: string }) {
   const [hasError, setHasError] = useState(false);
 
   return (
-    <span className={cn("relative inline-flex items-center justify-center overflow-hidden rounded-md bg-background ring-1 ring-border shadow-xs", className)}>
+    <span className={cn("relative inline-flex items-center justify-center overflow-hidden rounded-md bg-transparent", className)}>
       {!hasError ? (
         <img
-          src="/favicon.png"
+          src="/syntraxs-mark.png"
           alt="SYNTRAXS"
-          className="h-full w-full object-cover"
+          className="h-full w-full object-contain filter drop-shadow-[0_2px_6px_rgba(0,140,255,0.2)]"
           onError={() => setHasError(true)}
         />
       ) : (
@@ -25,14 +25,81 @@ export function BrandMark({ className }: { className?: string }) {
   );
 }
 
-export function Wordmark({ compact }: { compact?: boolean }) {
+export function Wordmark({
+  compact,
+  className,
+  size = "md",
+}: {
+  compact?: boolean;
+  className?: string;
+  size?: "sm" | "md" | "lg";
+}) {
+  const [imgError, setImgError] = useState(false);
+
+  if (compact) {
+    return <BrandMark className={cn("size-8", className)} />;
+  }
+
+  const heightClass = {
+    sm: "h-6 max-h-[24px]",
+    md: "h-7.5 max-h-[30px]",
+    lg: "h-9 max-h-[36px]",
+  }[size];
+
   return (
-    <div className="flex items-center gap-2.5">
-      <BrandMark className="size-8" />
-      {!compact && (
-        <div className="leading-none">
-          <div className="text-[13.5px] font-bold tracking-[0.14em] text-foreground">SYNTRA<span className="text-primary">X</span>S</div>
-          <div className="mt-1 text-[9.5px] font-semibold tracking-[0.3em] text-muted-foreground">TECHNOLOGIES</div>
+    <div className={cn("inline-flex items-center select-none group", className)}>
+      {!imgError ? (
+        <>
+          {/* Dark Mode Authentic 3D Chrome & Blue Logo */}
+          <img
+            src="/syntraxs-logo.png"
+            alt="SYNTRAXS Technologies"
+            className={cn(
+              "w-auto object-contain transition-all duration-200 block light:hidden filter drop-shadow-[0_2px_8px_rgba(0,140,255,0.18)]",
+              heightClass
+            )}
+            onError={() => setImgError(true)}
+          />
+          {/* Light Mode Authentic 3D Chrome & Blue Logo (Enhanced Contrast for White Backgrounds) */}
+          <img
+            src="/syntraxs-logo-light.png"
+            alt="SYNTRAXS Technologies"
+            className={cn(
+              "w-auto object-contain transition-all duration-200 hidden light:block filter drop-shadow-[0_1px_3px_rgba(0,0,0,0.15)]",
+              heightClass
+            )}
+            onError={() => setImgError(true)}
+          />
+        </>
+      ) : (
+        /* High-fidelity CSS/SVG Fallback matching the exact Typography and Letter Styling */
+        <div className="flex items-center gap-2.5">
+          <BrandMark className="size-8" />
+          <div className="h-6 w-px bg-border/80" />
+          <div className="leading-none">
+            <div className="flex items-center text-[13.5px] font-black tracking-[0.16em] uppercase">
+              <span className="bg-gradient-to-b from-white via-slate-200 to-slate-400 bg-clip-text text-transparent light:from-slate-700 light:to-slate-950">SYNTR</span>
+              {/* Custom 'A' with Glowing Electric Blue Triangle */}
+              <span className="relative inline-flex items-center justify-center bg-gradient-to-b from-white via-slate-200 to-slate-400 bg-clip-text text-transparent light:from-slate-700 light:to-slate-950">
+                A
+                <span
+                  aria-hidden="true"
+                  className="absolute bottom-[2px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[3px] border-r-[3px] border-b-[5px] border-l-transparent border-r-transparent border-b-[#00b4ff] drop-shadow-[0_0_6px_#00b4ff]"
+                />
+              </span>
+              {/* Custom 'X' in Vibrant 3D Electric Blue */}
+              <span className="bg-gradient-to-b from-[#38bdf8] via-[#0284c7] to-[#0369a1] bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(56,189,248,0.7)]">
+                X
+              </span>
+              <span className="bg-gradient-to-b from-white via-slate-200 to-slate-400 bg-clip-text text-transparent light:from-slate-700 light:to-slate-950">S</span>
+            </div>
+            {/* TECHNOLOGIES with Aerodynamic Left and Right Tapered Wings */}
+            <div className="mt-1 flex items-center justify-between text-[7.5px] font-bold text-[#00b4ff] tracking-[0.22em]">
+              <span className="inline-block w-3.5 h-[2px] bg-gradient-to-r from-transparent to-[#00b4ff]" />
+              <span className="px-0.5">TECHNOLOGIES</span>
+              <span className="inline-block w-3.5 h-[2px] bg-gradient-to-l from-transparent to-[#00b4ff]" />
+            </div>
+          </div>
         </div>
       )}
     </div>
