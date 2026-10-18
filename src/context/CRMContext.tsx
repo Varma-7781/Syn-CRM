@@ -12,6 +12,7 @@ import * as targetService from '../services/targetService';
 import * as activityService from '../services/activityService';
 import { isFirebaseEnabled } from '../config/firebase';
 import { FollowUpReminderPopup } from '../components/crm/FollowUpReminderPopup';
+import { playNotificationSound } from '../utils/soundService';
 import { toast } from 'sonner';
 
 interface UpcomingFollowUp {
@@ -33,15 +34,18 @@ interface CRMContextType {
   loading: boolean;
   upcomingFollowUps: UpcomingFollowUp[];
   overdueFollowUps: OverdueFollowUp[];
+  interestedLeads: Lead[];
   login: (email: string, password?: string, preferredRole?: 'admin' | 'sales') => Promise<User | null>;
   logout: () => Promise<void>;
   addLead: (lead: Partial<Lead>) => Promise<string | null>;
   updateLead: (leadId: string, updates: Partial<Lead>) => Promise<boolean>;
+  markLeadAsInterested: (leadId: string) => Promise<boolean>;
   deleteLead: (leadId: string) => Promise<boolean>;
   addTarget: (target: Omit<Target, 'id' | 'achieved'> & { achieved?: number }) => Promise<string | null>;
   updateTarget: (targetId: string, updates: Partial<Target>) => Promise<boolean>;
   addActivity: (activity: Omit<Activity, 'id' | 'timestamp'> & { timestamp?: string }) => Promise<string | null>;
   addUser: (user: Omit<User, 'id'>) => Promise<string | null>;
+  playNotificationSound: () => void;
 }
 
 const CRMContext = createContext<CRMContextType | null>(null);
@@ -57,6 +61,8 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
   const [activeReminder, setActiveReminder] = useState<UpcomingFollowUp | null>(null);
   const remindedLeads = useRef<Set<string>>(new Set());
   const notificationInterval = useRef<any>(null);
+  const isInitialLeadsLoadRef = useRef<boolean>(true);
+  const notifiedInterestedKeysRef = useRef<Set<string>>(new Set());
 
   // Sync session on mount
   useEffect(() => {
@@ -105,8 +111,57 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
 
       unsubLeads = leadService.subscribeToLeads((fetchedLeads) => {
         if (!cancelled) {
-          setLeads(fetchedLeads || []);
+          const leadList = fetchedLeads || [];
+          setLeads(leadList);
           setLoading(false);
+
+          if (isInitialLeadsLoadRef.current) {
+            isInitialLeadsLoadRef.current = false;
+            // Record pre-existing interested leads so page refreshes do not play sound
+            leadList.forEach((lead) => {
+              if (lead.status === 'interested') {
+                const key = `${lead.id}_${lead.interestedAt || lead.createdAt || 'initial'}`;
+                notifiedInterestedKeysRef.current.add(key);
+              }
+            });
+          } else {
+            // Live Firestore update received while user is online
+            if (currentUser?.role === 'admin') {
+              leadList.forEach((lead) => {
+                if (lead.status === 'interested') {
+                  const key = `${lead.id}_${lead.interestedAt || 'interested_state'}`;
+                  if (!notifiedInterestedKeysRef.current.has(key)) {
+                    notifiedInterestedKeysRef.current.add(key);
+
+                    const repName = lead.interestedByName || lead.rep || lead.assignedToName || 'Sales Representative';
+                    const compName = lead.companyName || lead.company || 'Unknown Client';
+                    const clientName = lead.contactName || lead.client || 'Contact';
+
+                    // 1. Play real-time notification sound chime
+                    playNotificationSound(0.5);
+
+                    // 2. High-visibility in-app toast
+                    toast.success(`💡 Client Interested: ${compName}`, {
+                      description: `${repName} marked ${clientName} (${compName}) as Interested!`,
+                      duration: 9000,
+                    });
+
+                    // 3. Desktop browser notification
+                    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                      try {
+                        const n = new Notification(`💡 Client Interested: ${compName}`, {
+                          body: `${repName} marked ${clientName} as Interested!\nPhone: ${lead.phone || 'N/A'}`,
+                          icon: '/favicon.png',
+                          tag: `interest-${lead.id}-${Date.now()}`,
+                        });
+                        n.onclick = () => window.focus();
+                      } catch {}
+                    }
+                  }
+                }
+              });
+            }
+          }
         }
       });
 
@@ -194,6 +249,17 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     });
     return overdue;
   }, [relevantLeads]);
+
+  // Interested leads ordered by most recently marked
+  const interestedLeads = useMemo(() => {
+    return leads
+      .filter((l) => l.status === 'interested')
+      .sort((a, b) => {
+        const timeA = a.interestedAt ? new Date(a.interestedAt).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+        const timeB = b.interestedAt ? new Date(b.interestedAt).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+        return timeB - timeA;
+      });
+  }, [leads]);
 
   // Follow-up polling engine (every 10 seconds)
   useEffect(() => {
@@ -356,6 +422,58 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     return res;
   }, []);
 
+  const markLeadAsInterested = useCallback(
+    async (leadId: string) => {
+      const targetLead = leads.find((l) => l.id === leadId);
+      const repName = currentUser?.name || 'Sales Rep';
+      const nowIso = new Date().toISOString();
+
+      const ok = await leadService.updateLead(leadId, {
+        status: 'interested',
+        interestedAt: nowIso,
+        interestedBy: currentUser?.id || 'sales',
+        interestedByName: repName,
+        lastContact: nowIso,
+      });
+
+      if (ok) {
+        setLeads((prev) =>
+          prev.map((l) =>
+            l.id === leadId
+              ? leadService.normalizeLead({
+                  ...l,
+                  status: 'interested',
+                  interestedAt: nowIso,
+                  interestedBy: currentUser?.id || 'sales',
+                  interestedByName: repName,
+                  lastContact: nowIso,
+                })
+              : l
+          )
+        );
+
+        if (targetLead) {
+          const comp = targetLead.companyName || targetLead.company || 'Unknown Client';
+          const client = targetLead.contactName || targetLead.client || 'Client';
+          await activityService.addActivity({
+            leadId,
+            userId: currentUser?.id || 'sales',
+            userName: repName,
+            companyName: comp,
+            type: 'note',
+            description: `${repName} marked client ${client} (${comp}) as Interested`,
+            what: 'Marked as Interested',
+          });
+        }
+        toast.success(`Marked as Interested! Admin has been notified.`);
+      } else {
+        toast.error('Failed to update lead to interested.');
+      }
+      return ok;
+    },
+    [leads, currentUser]
+  );
+
   const value = useMemo(
     () => ({
       currentUser,
@@ -366,15 +484,18 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       loading,
       upcomingFollowUps,
       overdueFollowUps,
+      interestedLeads,
       login,
       logout,
       addLead,
       updateLead,
+      markLeadAsInterested,
       deleteLead,
       addTarget,
       updateTarget,
       addActivity,
       addUser,
+      playNotificationSound: () => playNotificationSound(0.5),
     }),
     [
       currentUser,
@@ -385,10 +506,12 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       loading,
       upcomingFollowUps,
       overdueFollowUps,
+      interestedLeads,
       login,
       logout,
       addLead,
       updateLead,
+      markLeadAsInterested,
       deleteLead,
       addTarget,
       updateTarget,

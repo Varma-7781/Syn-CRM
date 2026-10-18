@@ -3,10 +3,12 @@ import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Activity, BarChart3, Bell, ChevronsUpDown, Command, FileBarChart, Gauge, LayoutDashboard,
   LogOut, Menu, Moon, Search, Sun, Target, Trophy, Users, Workflow, X, Clock, AlertTriangle,
+  Volume2, Lightbulb,
 } from "lucide-react";
 import { Avatar, Wordmark, useTheme } from "./primitives";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 type Item = { title: string; to: string; icon: typeof Gauge };
 type Group = { label?: string; items: Item[] };
@@ -178,8 +180,9 @@ export function AppShell({ role, children }: { role: "admin" | "sales"; children
             <NotificationBell />
             <button
               onClick={(e) => toggle(e)}
-              className="group relative flex size-8 items-center justify-center rounded-md border border-border bg-surface/60 backdrop-blur-sm text-muted-foreground transition-all duration-300 hover:bg-secondary hover:text-foreground hover:scale-105 active:scale-95 shadow-xs"
               aria-label="Toggle theme"
+              suppressHydrationWarning
+              className="group relative flex size-8 items-center justify-center rounded-md border border-border bg-surface/60 backdrop-blur-sm text-muted-foreground transition-all duration-300 hover:bg-secondary hover:text-foreground hover:scale-105 active:scale-95 shadow-xs"
               title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
             >
               <span className="transition-transform duration-500 ease-out group-hover:rotate-45">
@@ -210,8 +213,10 @@ export function AppShell({ role, children }: { role: "admin" | "sales"; children
 }
 
 function NotificationBell() {
-  const { upcomingFollowUps, overdueFollowUps, updateLead } = useCRM();
-  const totalCount = upcomingFollowUps.length + overdueFollowUps.length;
+  const { upcomingFollowUps, overdueFollowUps, interestedLeads, updateLead, currentUser, playNotificationSound } = useCRM();
+  const isAdmin = currentUser?.role === "admin";
+  const interestList = isAdmin ? interestedLeads : [];
+  const totalCount = upcomingFollowUps.length + overdueFollowUps.length + interestList.length;
 
   const handleClearAllOverdue = () => {
     overdueFollowUps.forEach((item) => {
@@ -222,32 +227,98 @@ function NotificationBell() {
     });
   };
 
+  const handleTestSound = () => {
+    playNotificationSound();
+    toast.info("Testing notification chime sound 🔔");
+  };
+
   return (
     <Popover>
       <PopoverTrigger className="relative flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground" aria-label="Notifications">
         <Bell className="size-4" />
         {totalCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white ring-2 ring-background">
+          <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white ring-2 ring-background">
             {totalCount > 9 ? "9+" : totalCount}
           </span>
         )}
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[calc(100vw-1.5rem)] sm:w-88 max-w-[360px] border-border bg-popover p-0 shadow-pop">
+      <PopoverContent align="end" className="w-[calc(100vw-1.5rem)] sm:w-96 max-w-[390px] border-border bg-popover p-0 shadow-pop">
         <div className="flex items-center justify-between border-b border-border px-3.5 py-2.5">
-          <span className="text-[13.5px] font-semibold text-foreground">Follow-ups & Alerts</span>
-          {overdueFollowUps.length > 0 && (
-            <button onClick={handleClearAllOverdue} className="text-[12px] font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Clear overdue
+          <span className="text-[13.5px] font-semibold text-foreground flex items-center gap-1.5">
+            Notifications
+            {interestList.length > 0 && (
+              <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10.5px] font-bold text-amber-600 dark:text-amber-400">
+                {interestList.length} Interested
+              </span>
+            )}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleTestSound}
+              type="button"
+              className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-secondary"
+              title="Test the notification chime sound"
+            >
+              <Volume2 className="size-3" />
+              <span>Test sound</span>
             </button>
-          )}
+            {overdueFollowUps.length > 0 && (
+              <button onClick={handleClearAllOverdue} className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Clear overdue
+              </button>
+            )}
+          </div>
         </div>
-        <div className="max-h-80 overflow-y-auto divide-y divide-border">
+        <div className="max-h-84 overflow-y-auto divide-y divide-border">
           {totalCount === 0 ? (
             <div className="py-6 text-center text-[13px] text-muted-foreground">
               No pending notifications
             </div>
           ) : (
             <>
+              {/* Interested Clients Section for Admin */}
+              {interestList.length > 0 && (
+                <div className="bg-amber-500/5 divide-y divide-border">
+                  <div className="px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                    <Lightbulb className="size-3" /> Interested Clients ({interestList.length})
+                  </div>
+                  {interestList.slice(0, 10).map((lead) => {
+                    const comp = lead.companyName || lead.company;
+                    const client = lead.contactName || lead.client;
+                    const rep = lead.interestedByName || lead.rep || lead.assignedToName || 'Sales Rep';
+                    const timeStr = lead.interestedAt
+                      ? new Date(lead.interestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : '';
+                    return (
+                      <div key={lead.id} className="flex items-start gap-2.5 px-3.5 py-2.5 hover:bg-amber-500/10 transition-colors">
+                        <div className="mt-0.5 size-5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                          <Lightbulb className="size-3" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="truncate text-[13px] font-semibold text-foreground">
+                              {comp}
+                            </span>
+                            {timeStr && (
+                              <span className="num text-[10.5px] text-muted-foreground shrink-0">
+                                {timeStr}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[12px] text-muted-foreground truncate">
+                            {client} · {lead.phone || lead.email || 'No phone'}
+                          </div>
+                          <div className="mt-0.5 text-[11.5px] font-medium text-amber-700 dark:text-amber-300">
+                            Marked Interested by <span className="font-semibold">{rep}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Upcoming Follow-ups */}
               {upcomingFollowUps.map(({ lead, minutesRemaining }) => (
                 <div key={lead.id} className="flex items-start gap-2.5 px-3.5 py-2.5 hover:bg-secondary/60">
                   <Clock className="mt-0.5 size-3.5 text-primary shrink-0" />
@@ -264,6 +335,8 @@ function NotificationBell() {
                   </span>
                 </div>
               ))}
+
+              {/* Overdue Follow-ups */}
               {overdueFollowUps.map(({ lead, reason }) => (
                 <div key={lead.id} className="flex items-start gap-2.5 px-3.5 py-2.5 hover:bg-secondary/60 bg-destructive/5">
                   <AlertTriangle className="mt-0.5 size-3.5 text-destructive shrink-0" />

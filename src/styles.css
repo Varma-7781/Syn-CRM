@@ -305,9 +305,9 @@
 }
 
 .light .dashboard-doodle-bg {
-  opacity: 0.115;
+  opacity: 0.072;
   mix-blend-mode: multiply;
-  filter: contrast(1.12) brightness(0.98);
+  filter: contrast(1.02) brightness(0.99);
 }
 
 :root:not(.light) .dashboard-doodle-bg {

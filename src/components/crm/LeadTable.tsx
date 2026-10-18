@@ -12,7 +12,7 @@ import { toast } from "sonner";
 const selectCls = "h-8 rounded-md border border-border bg-surface px-2 text-[12.5px] text-foreground outline-none hover:border-border-strong focus:border-primary";
 
 export function LeadTable({ leads, admin }: { leads: Lead[]; admin?: boolean }) {
-  const { users, updateLead, activities, addActivity, currentUser } = useCRM();
+  const { users, updateLead, markLeadAsInterested, activities, addActivity, currentUser } = useCRM();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
@@ -124,6 +124,7 @@ export function LeadTable({ leads, admin }: { leads: Lead[]; admin?: boolean }) 
               <th className="px-2 py-2.5">Status</th>
               <th className="px-2 py-2.5">Priority</th>
               {admin && <th className="px-2 py-2.5">Rep</th>}
+              <th className="px-2 py-2.5 text-center">Interest</th>
               <th className="w-10 px-2 py-2.5" />
             </tr>
           </thead>
@@ -148,13 +149,29 @@ export function LeadTable({ leads, admin }: { leads: Lead[]; admin?: boolean }) 
                   <td className="px-2"><StatusBadge status={l.status || "new"} /></td>
                   <td className="px-2"><PriorityMark p={l.priority || "medium"} /></td>
                   {admin && <td className="px-2">{repName ? <span className="flex items-center gap-2 whitespace-nowrap text-[13px] font-medium text-foreground"><Avatar name={repName} />{repName.split(" ")[0]}</span> : <span className="text-[12px] italic text-muted-foreground">Unassigned</span>}</td>}
+                  <td className="px-2 text-center" onClick={(e) => e.stopPropagation()}>
+                    {l.status === 'interested' ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 whitespace-nowrap" title={l.interestedByName ? `Marked by ${l.interestedByName}` : 'Interested'}>
+                        💡 Interested ✓
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => markLeadAsInterested(l.id)}
+                        className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2.5 py-1 text-[11.5px] font-semibold transition-all hover:scale-105 active:scale-95 shadow-sm whitespace-nowrap"
+                        title={`Mark ${comp} as Interested (triggers Admin notification with sound)`}
+                      >
+                        💡 Interest
+                      </button>
+                    )}
+                  </td>
                   <td className="px-2"><MoreHorizontal className="size-4 text-muted-foreground hover:text-foreground" /></td>
                 </tr>
               );
             })}
             {view.length === 0 && (
               <tr>
-                <td colSpan={12} className="py-16 text-center">
+                <td colSpan={13} className="py-16 text-center">
                   <div className="sticky left-0 right-0 max-w-sm mx-auto px-4">
                     <div className="text-[14px] font-semibold text-foreground">No leads match these filters</div>
                     <div className="mt-1 text-[12.5px] text-muted-foreground">Try clearing a filter or searching another company.</div>
@@ -181,7 +198,7 @@ export function LeadTable({ leads, admin }: { leads: Lead[]; admin?: boolean }) 
 }
 
 function LeadDrawer({ lead, onClose, onSave }: { lead: Lead | null; onClose: () => void; onSave?: () => void }) {
-  const { updateLead, addActivity, activities, currentUser } = useCRM();
+  const { updateLead, markLeadAsInterested, addActivity, activities, currentUser } = useCRM();
   const [status, setStatus] = useState<any>(lead?.status || "new");
   const [priority, setPriority] = useState<any>(lead?.priority || "medium");
   const [followUp, setFollowUp] = useState(lead?.nextFollowUp || "");
@@ -224,13 +241,19 @@ function LeadDrawer({ lead, onClose, onSave }: { lead: Lead | null; onClose: () 
     if (!lead) return;
     setSaving(true);
     try {
-      await updateLead(lead.id, {
+      const updates: any = {
         status,
         priority,
         nextFollowUp: followUp || undefined,
         value: Number(val) || 0,
         notes,
-      });
+      };
+      if (status === "interested" && lead.status !== "interested") {
+        updates.interestedAt = new Date().toISOString();
+        updates.interestedBy = currentUser?.id || "sales";
+        updates.interestedByName = currentUser?.name || "Sales Rep";
+      }
+      await updateLead(lead.id, updates);
       toast.success("Lead details updated");
       onSave?.();
     } catch {
@@ -267,6 +290,38 @@ function LeadDrawer({ lead, onClose, onSave }: { lead: Lead | null; onClose: () 
                 </button>
               ))}
             </div>
+            {status === "interested" ? (
+              <div className="flex items-center justify-between border-b border-border bg-emerald-500/10 px-4 py-2.5 text-[12.5px] text-emerald-800 dark:text-emerald-200">
+                <span className="font-semibold flex items-center gap-1.5">
+                  💡 Client Marked as Interested
+                </span>
+                <span className="text-[11.5px] opacity-80">
+                  {lead.interestedByName ? `Marked by ${lead.interestedByName}` : "Admin notified with sound"}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between border-b border-border bg-amber-500/10 px-4 py-2.5">
+                <div>
+                  <div className="text-[12.5px] font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                    💡 Client Interested?
+                  </div>
+                  <div className="text-[11px] text-amber-700 dark:text-amber-300">
+                    Hits the interest button to notify Admin immediately with sound
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  type="button"
+                  onClick={async () => {
+                    await markLeadAsInterested(lead.id);
+                    setStatus("interested");
+                  }}
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-semibold text-[12px] h-7 px-3 shrink-0 shadow-sm"
+                >
+                  💡 Hit Interest
+                </Button>
+              </div>
+            )}
             <div className="space-y-5 p-5">
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
                 {[

@@ -28,6 +28,7 @@ export function LoginScreen() {
           <button
             onClick={(e) => toggle(e)}
             aria-label="Toggle theme"
+            suppressHydrationWarning
             className="group relative flex size-9 sm:size-8 items-center justify-center rounded-md border border-border bg-surface/80 backdrop-blur-sm text-muted-foreground transition-all duration-300 hover:text-foreground hover:scale-105 active:scale-95 shadow-xs"
             title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
           >
