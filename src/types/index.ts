@@ -1,8 +1,8 @@
 export interface Lead {
   id: string;
   sno?: number;
-  companyName: string;
-  contactName: string;
+  companyName?: string;
+  contactName?: string;
   // Compatibility aliases for Lovable UI
   company?: string;
   client?: string;
@@ -22,10 +22,10 @@ export interface Lead {
   priority: 'low' | 'medium' | 'high';
   assignedTo?: string;
   assignedToName?: string;
-  createdAt: string;
+  createdAt?: string;
   lastContact?: string;
   nextFollowUp?: string;
-  notes: string;
+  notes?: string;
   productsOffered?: string[];
   callHistory?: Array<{
     date: string;
@@ -70,6 +70,9 @@ export interface Activity {
   who?: string;
   what?: string;
   meta?: string;
+  userName?: string;
+  companyName?: string;
+  t?: string;
 }
 
 export interface User {

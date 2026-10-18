@@ -19,11 +19,8 @@ export const STATUS_META: Record<LeadStatus, { label: string; tone: string }> = 
   dnp: { label: "DNP", tone: "subtle" },
 };
 
-export interface Lead {
-  id: string; sno: number; company: string; requirement: string; client: string;
-  designation: string; phone: string; email: string; category: string; value: number;
-  date: string; status: LeadStatus; priority: Priority; rep: string | null;
-}
+import type { Lead } from '../types';
+export type { Lead };
 
 export const REPS = ["Arjun Mehta", "Priya Nair", "Rahul Verma", "Sneha Iyer", "Karan Shah"];
 const companies = ["Tata Elxsi", "Infosys BPM", "Zoho Corp", "Freshworks", "Mahindra Logistics", "Razorpay", "Ather Energy", "Nykaa", "Dunzo", "Swiggy Instamart", "Ola Electric", "Groww", "Cred", "Lenskart", "Urban Company", "Meesho", "PhonePe", "Zerodha", "BigBasket", "Delhivery", "Byju's", "upGrad"];
