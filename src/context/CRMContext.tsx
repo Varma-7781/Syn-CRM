@@ -62,7 +62,8 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
   const remindedLeads = useRef<Set<string>>(new Set());
   const notificationInterval = useRef<any>(null);
   const isInitialLeadsLoadRef = useRef<boolean>(true);
-  const notifiedInterestedKeysRef = useRef<Set<string>>(new Set());
+  const previousLeadsStatusRef = useRef<Map<string, string>>(new Map());
+  const sessionLoginTimeRef = useRef<number>(Date.now());
 
   // Sync session on mount
   useEffect(() => {
@@ -90,8 +91,15 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       setTargets([]);
       setActivities([]);
       setLoading(false);
+      isInitialLeadsLoadRef.current = true;
+      previousLeadsStatusRef.current.clear();
       return;
     }
+
+    // Reset initial load and record fresh session timestamp upon user login
+    isInitialLeadsLoadRef.current = true;
+    previousLeadsStatusRef.current.clear();
+    sessionLoginTimeRef.current = Date.now();
 
     if (!isFirebaseEnabled()) {
       setLoading(false);
@@ -115,52 +123,64 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
           setLeads(leadList);
           setLoading(false);
 
+          // Initial snapshot after login or page load:
+          // Record current baseline statuses for all existing leads.
+          // NEVER play sounds or show popups for old leads upon login or page refresh.
           if (isInitialLeadsLoadRef.current) {
-            isInitialLeadsLoadRef.current = false;
-            // Record pre-existing interested leads so page refreshes do not play sound
-            leadList.forEach((lead) => {
-              if (lead.status === 'interested') {
-                const key = `${lead.id}_${lead.interestedAt || lead.createdAt || 'initial'}`;
-                notifiedInterestedKeysRef.current.add(key);
-              }
-            });
-          } else {
-            // Live Firestore update received while user is online
-            if (currentUser?.role === 'admin') {
+            if (leadList.length > 0) {
+              isInitialLeadsLoadRef.current = false;
               leadList.forEach((lead) => {
-                if (lead.status === 'interested') {
-                  const key = `${lead.id}_${lead.interestedAt || 'interested_state'}`;
-                  if (!notifiedInterestedKeysRef.current.has(key)) {
-                    notifiedInterestedKeysRef.current.add(key);
-
-                    const repName = lead.interestedByName || lead.rep || lead.assignedToName || 'Sales Representative';
-                    const compName = lead.companyName || lead.company || 'Unknown Client';
-                    const clientName = lead.contactName || lead.client || 'Contact';
-
-                    // 1. Play real-time notification sound chime
-                    playNotificationSound(0.5);
-
-                    // 2. High-visibility in-app toast
-                    toast.success(`💡 Client Interested: ${compName}`, {
-                      description: `${repName} marked ${clientName} (${compName}) as Interested!`,
-                      duration: 9000,
-                    });
-
-                    // 3. Desktop browser notification
-                    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-                      try {
-                        const n = new Notification(`💡 Client Interested: ${compName}`, {
-                          body: `${repName} marked ${clientName} as Interested!\nPhone: ${lead.phone || 'N/A'}`,
-                          icon: '/favicon.png',
-                          tag: `interest-${lead.id}-${Date.now()}`,
-                        });
-                        n.onclick = () => window.focus();
-                      } catch {}
-                    }
-                  }
-                }
+                previousLeadsStatusRef.current.set(lead.id, lead.status);
               });
             }
+            return;
+          }
+
+          // Subsequent live real-time updates while Admin is actively logged in
+          if (currentUser?.role === 'admin') {
+            leadList.forEach((lead) => {
+              const prevStatus = previousLeadsStatusRef.current.get(lead.id);
+              const isNowInterested = lead.status === 'interested';
+              const isStatusTransition = isNowInterested && prevStatus !== 'interested';
+
+              // Only trigger if this interest event happened during this active session (after login)
+              const interestedTimestamp = lead.interestedAt ? new Date(lead.interestedAt).getTime() : 0;
+              const isLiveEvent = interestedTimestamp > 0 && interestedTimestamp >= (sessionLoginTimeRef.current - 5000);
+
+              if (isStatusTransition && isLiveEvent) {
+                const repName = lead.interestedByName || lead.rep || lead.assignedToName || 'Sales Representative';
+                const compName = lead.companyName || lead.company || 'Unknown Client';
+                const clientName = lead.contactName || lead.client || 'Contact';
+
+                // 1. Play real-time notification sound chime
+                playNotificationSound(0.5);
+
+                // 2. High-visibility in-app toast
+                toast.success(`💡 Client Interested: ${compName}`, {
+                  description: `${repName} marked ${clientName} (${compName}) as Interested!`,
+                  duration: 9000,
+                });
+
+                // 3. Desktop browser notification
+                if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                  try {
+                    const n = new Notification(`💡 Client Interested: ${compName}`, {
+                      body: `${repName} marked ${clientName} as Interested!\nPhone: ${lead.phone || 'N/A'}`,
+                      icon: '/favicon.png',
+                      tag: `interest-${lead.id}-${Date.now()}`,
+                    });
+                    n.onclick = () => window.focus();
+                  } catch {}
+                }
+              }
+
+              // Keep baseline status map updated
+              previousLeadsStatusRef.current.set(lead.id, lead.status);
+            });
+          } else {
+            leadList.forEach((lead) => {
+              previousLeadsStatusRef.current.set(lead.id, lead.status);
+            });
           }
         }
       });

@@ -2,12 +2,22 @@ import { useEffect, useState, type ReactNode } from "react";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { STATUS_META, type LeadStatus, type Priority } from "@/lib/crm-data";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/context/ThemeContext";
 
 export function BrandMark({ className }: { className?: string }) {
   const [hasError, setHasError] = useState(false);
+  const { theme } = useTheme();
+  const isLight = theme === "light";
 
   return (
-    <span className={cn("relative inline-flex items-center justify-center overflow-hidden rounded-md bg-transparent", className)}>
+    <span
+      className={cn(
+        "relative inline-flex items-center justify-center overflow-hidden rounded-md transition-all duration-300 ease-in-out",
+        "light:bg-[#0B0F19] light:border light:border-slate-800/90 light:p-1 light:shadow-sm",
+        isLight && "bg-[#0B0F19] border border-slate-800/90 p-1 shadow-sm",
+        className
+      )}
+    >
       {!hasError ? (
         <img
           src="/syntraxs-mark.png"
@@ -35,69 +45,68 @@ export function Wordmark({
   size?: "sm" | "md" | "lg";
 }) {
   const [imgError, setImgError] = useState(false);
+  const { theme } = useTheme();
+  const isLight = theme === "light";
 
   if (compact) {
     return <BrandMark className={cn("size-8", className)} />;
   }
 
   const heightClass = {
-    sm: "h-6 max-h-[24px]",
-    md: "h-7.5 max-h-[30px]",
-    lg: "h-9 max-h-[36px]",
+    sm: "h-5.5 max-h-[22px]",
+    md: "h-7 max-h-[28px]",
+    lg: "h-8.5 max-h-[34px]",
   }[size];
 
   return (
-    <div className={cn("inline-flex items-center select-none group", className)}>
+    <div
+      className={cn(
+        "inline-flex items-center select-none transition-all duration-300 ease-in-out group",
+        // In light theme: sleek obsidian black container pill with smooth rounded corners, tech border, and subtle shadow
+        "light:bg-[#0B0F19] light:border light:border-slate-800/90 light:shadow-sm light:rounded-lg light:px-2.5 light:py-1",
+        isLight && "bg-[#0B0F19] border border-slate-800/90 shadow-sm rounded-lg px-2.5 py-1",
+        // In dark theme: completely seamless transparent integration
+        !isLight && "bg-transparent border-transparent p-0 shadow-none",
+        className
+      )}
+    >
       {!imgError ? (
-        <>
-          {/* Dark Mode Authentic 3D Chrome & Blue Logo */}
-          <img
-            src="/syntraxs-logo.png"
-            alt="SYNTRAXS Technologies"
-            className={cn(
-              "w-auto object-contain transition-all duration-200 block light:hidden filter drop-shadow-[0_2px_8px_rgba(0,140,255,0.18)]",
-              heightClass
-            )}
-            onError={() => setImgError(true)}
-          />
-          {/* Light Mode Authentic 3D Chrome & Blue Logo (Enhanced Contrast for White Backgrounds) */}
-          <img
-            src="/syntraxs-logo-light.png"
-            alt="SYNTRAXS Technologies"
-            className={cn(
-              "w-auto object-contain transition-all duration-200 hidden light:block filter drop-shadow-[0_1px_3px_rgba(0,0,0,0.15)]",
-              heightClass
-            )}
-            onError={() => setImgError(true)}
-          />
-        </>
+        <img
+          src="/syntraxs-logo.png"
+          alt="SYNTRAXS Technologies"
+          className={cn(
+            "w-auto object-contain transition-all duration-300 filter drop-shadow-[0_2px_8px_rgba(0,140,255,0.2)]",
+            heightClass
+          )}
+          onError={() => setImgError(true)}
+        />
       ) : (
         /* High-fidelity CSS/SVG Fallback matching the exact Typography and Letter Styling */
-        <div className="flex items-center gap-2.5">
-          <BrandMark className="size-8" />
-          <div className="h-6 w-px bg-border/80" />
+        <div className="flex items-center gap-2">
+          <BrandMark className="size-6.5" />
+          <div className="h-4.5 w-px bg-slate-700/80" />
           <div className="leading-none">
-            <div className="flex items-center text-[13.5px] font-black tracking-[0.16em] uppercase">
-              <span className="bg-gradient-to-b from-white via-slate-200 to-slate-400 bg-clip-text text-transparent light:from-slate-700 light:to-slate-950">SYNTR</span>
+            <div className="flex items-center text-[12.5px] font-black tracking-[0.16em] uppercase">
+              <span className="bg-gradient-to-b from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">SYNTR</span>
               {/* Custom 'A' with Glowing Electric Blue Triangle */}
-              <span className="relative inline-flex items-center justify-center bg-gradient-to-b from-white via-slate-200 to-slate-400 bg-clip-text text-transparent light:from-slate-700 light:to-slate-950">
+              <span className="relative inline-flex items-center justify-center bg-gradient-to-b from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
                 A
                 <span
                   aria-hidden="true"
-                  className="absolute bottom-[2px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[3px] border-r-[3px] border-b-[5px] border-l-transparent border-r-transparent border-b-[#00b4ff] drop-shadow-[0_0_6px_#00b4ff]"
+                  className="absolute bottom-[1.5px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[2.5px] border-r-[2.5px] border-b-[4.5px] border-l-transparent border-r-transparent border-b-[#00b4ff] drop-shadow-[0_0_6px_#00b4ff]"
                 />
               </span>
               {/* Custom 'X' in Vibrant 3D Electric Blue */}
               <span className="bg-gradient-to-b from-[#38bdf8] via-[#0284c7] to-[#0369a1] bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(56,189,248,0.7)]">
                 X
               </span>
-              <span className="bg-gradient-to-b from-white via-slate-200 to-slate-400 bg-clip-text text-transparent light:from-slate-700 light:to-slate-950">S</span>
+              <span className="bg-gradient-to-b from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">S</span>
             </div>
             {/* TECHNOLOGIES with Aerodynamic Left and Right Tapered Wings */}
-            <div className="mt-1 flex items-center justify-between text-[7.5px] font-bold text-[#00b4ff] tracking-[0.22em]">
-              <span className="inline-block w-3.5 h-[2px] bg-gradient-to-r from-transparent to-[#00b4ff]" />
+            <div className="mt-0.5 flex items-center justify-between text-[7px] font-bold text-[#00b4ff] tracking-[0.22em]">
+              <span className="inline-block w-3 h-[1.5px] bg-gradient-to-r from-transparent to-[#00b4ff]" />
               <span className="px-0.5">TECHNOLOGIES</span>
-              <span className="inline-block w-3.5 h-[2px] bg-gradient-to-l from-transparent to-[#00b4ff]" />
+              <span className="inline-block w-3 h-[1.5px] bg-gradient-to-l from-transparent to-[#00b4ff]" />
             </div>
           </div>
         </div>
