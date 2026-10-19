@@ -340,10 +340,43 @@
   }
 }
 
-/* Sonner Toast & Close Button: Positioned strictly on the RIGHT, INSIDE the popup */
+/* Sonner Toast Container: Spaced padding for close button on right */
 [data-sonner-toast] {
   padding-right: 38px !important;
-  position: relative !important;
+}
+
+/* Ensure ALL toast data, text, and titles remain 100% visible and NEVER vanish */
+[data-sonner-toast] > * {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+[data-sonner-toast][data-expanded='false'][data-front='false'][data-styled='true'] > * {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+[data-sonner-toast] [data-content] {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+[data-sonner-toast] [data-title] {
+  opacity: 1 !important;
+  visibility: visible !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+}
+
+[data-sonner-toast] [data-description] {
+  opacity: 0.9 !important;
+  visibility: visible !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
 }
 
 [data-sonner-toast] [data-close-button] {

@@ -134,7 +134,7 @@ function RootComponent() {
       <ThemeProvider>
         <CRMProvider>
           <Outlet />
-          <Toaster richColors position="top-right" closeButton duration={3000} />
+          <Toaster position="top-right" closeButton duration={3000} expand={true} visibleToasts={2} gap={12} />
         </CRMProvider>
       </ThemeProvider>
     </QueryClientProvider>
