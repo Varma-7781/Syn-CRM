@@ -4,6 +4,7 @@ import {
   Activity, BarChart3, Bell, ChevronsUpDown, Command, FileBarChart, Gauge, LayoutDashboard,
   LogOut, Menu, Moon, Search, Sun, Target, Trophy, Users, Workflow, X, Clock, AlertTriangle,
   Volume2, Lightbulb, Play, Check, Settings, Sparkles, Phone, ExternalLink,
+  Trash2, CheckCircle2, RotateCcw,
 } from "lucide-react";
 import { Avatar, Wordmark, useTheme } from "./primitives";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -19,6 +20,7 @@ const ADMIN_NAV: Group[] = [
   { label: "Management", items: [
     { title: "Lead Management", to: "/admin/leads", icon: Workflow },
     { title: "Team Performance", to: "/admin/team", icon: Users },
+    { title: "Interested Clients", to: "/admin/interested", icon: Sparkles },
     { title: "Target Management", to: "/admin/targets", icon: Target },
   ] },
   { label: "Analytics", items: [
@@ -38,7 +40,7 @@ import { useCRM } from "@/context/CRMContext";
 
 export function AppShell({ role, children }: { role: "admin" | "sales"; children: ReactNode }) {
   const navigate = useNavigate();
-  const { currentUser, logout } = useCRM();
+  const { currentUser, logout, interestedLeads } = useCRM();
   const nav = role === "admin"
     ? ADMIN_NAV
     : currentUser?.role === "admin"
@@ -105,6 +107,8 @@ export function AppShell({ role, children }: { role: "admin" | "sales"; children
             <ul className="space-y-0.5">
               {g.items.map((it) => {
                 const active = isMatch(it.to);
+                const isInterested = it.to === "/admin/interested";
+                const badgeCount = isInterested ? interestedLeads.length : 0;
                 return (
                   <li key={it.to}>
                     <Link to={it.to} onClick={() => setOpen(false)}
@@ -112,7 +116,12 @@ export function AppShell({ role, children }: { role: "admin" | "sales"; children
                         active ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold" : "text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground")}>
                       {active && <span className="absolute -left-2.5 top-1.5 bottom-1.5 w-[2.5px] rounded-r bg-primary" />}
                       <it.icon className={cn("size-4 shrink-0", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-                      <span className="truncate">{it.title}</span>
+                      <span className="truncate flex-1">{it.title}</span>
+                      {badgeCount > 0 && (
+                        <span className="ml-auto rounded-full bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.2 text-[10.5px] font-bold text-amber-500 dark:text-amber-400">
+                          {badgeCount}
+                        </span>
+                      )}
                     </Link>
                   </li>
                 );
@@ -213,12 +222,33 @@ export function AppShell({ role, children }: { role: "admin" | "sales"; children
   );
 }
 
+const CLEARED_NOTIFS_KEY = "crm_cleared_notifications";
+
+function getStoredClearedIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(CLEARED_NOTIFS_KEY);
+    if (!raw) return new Set<string>();
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? new Set<string>(parsed) : new Set<string>();
+  } catch {
+    return new Set<string>();
+  }
+}
+
+function saveClearedIds(ids: Set<string>) {
+  try {
+    localStorage.setItem(CLEARED_NOTIFS_KEY, JSON.stringify(Array.from(ids)));
+  } catch (e) {
+    console.error("Failed to save cleared notifications", e);
+  }
+}
+
 function NotificationBell() {
   const { upcomingFollowUps, overdueFollowUps, interestedLeads, updateLead, currentUser } = useCRM();
   const isAdmin = currentUser?.role === "admin";
   const interestList = isAdmin ? interestedLeads : [];
-  const totalCount = upcomingFollowUps.length + overdueFollowUps.length + interestList.length;
 
+  const [clearedIds, setClearedIds] = useState<Set<string>>(() => getStoredClearedIds());
   const [activeTab, setActiveTab] = useState<"all" | "interested" | "followups" | "sounds">("all");
   const [showAllItems, setShowAllItems] = useState(false);
   const [selectedSound, setSelectedSound] = useState(() => soundService.getSelectedPresetId());
@@ -232,7 +262,7 @@ function NotificationBell() {
     setTimeout(() => setPlayingPresetId(null), 1200);
     toast.success(`Active tone set: ${icon} ${presetName}`, {
       description: "Incoming 'Interested' leads will now play this sound alert.",
-      duration: 3500,
+      duration: 3000,
     });
   };
 
@@ -243,14 +273,34 @@ function NotificationBell() {
     setTimeout(() => setPlayingPresetId(null), 1200);
   };
 
-  const handleClearAllOverdue = () => {
-    overdueFollowUps.forEach((item) => {
-      updateLead(item.lead.id, {
-        followUpStatus: "completed",
-        followUpCompletedAt: new Date().toISOString(),
-      });
+  const handleDismissOne = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setClearedIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      saveClearedIds(next);
+      return next;
     });
-    toast.success("All overdue follow-ups cleared");
+    toast.success("Notification dismissed", { duration: 2000 });
+  };
+
+  const handleClearAll = () => {
+    const allIds = allNotifications.map((n) => n.id);
+    setClearedIds((prev) => {
+      const next = new Set(prev);
+      allIds.forEach((id) => next.add(id));
+      saveClearedIds(next);
+      return next;
+    });
+    toast.success("All notifications cleared", { duration: 2500 });
+  };
+
+  const handleRestoreCleared = () => {
+    setClearedIds(new Set());
+    try {
+      localStorage.removeItem(CLEARED_NOTIFS_KEY);
+    } catch {}
+    toast.success("Notifications restored", { duration: 2000 });
   };
 
   // Compile unified list of notifications
@@ -289,8 +339,14 @@ function NotificationBell() {
     })),
   ];
 
+  // Active (non-cleared) notifications
+  const activeNotifications = allNotifications.filter((item) => !clearedIds.has(item.id));
+  const activeInterest = activeNotifications.filter((item) => item.type === "interested");
+  const activeFollowups = activeNotifications.filter((item) => item.type === "upcoming" || item.type === "overdue");
+  const totalCount = activeNotifications.length;
+
   // Filter based on active tab
-  const filteredNotifications = allNotifications.filter((item) => {
+  const filteredNotifications = activeNotifications.filter((item) => {
     if (activeTab === "all") return true;
     if (activeTab === "interested") return item.type === "interested";
     if (activeTab === "followups") return item.type === "upcoming" || item.type === "overdue";
@@ -320,21 +376,36 @@ function NotificationBell() {
         align="end"
         className="w-[calc(100vw-1.5rem)] sm:w-[420px] max-w-[420px] border-border bg-popover p-0 shadow-2xl rounded-xl overflow-hidden"
       >
-        {/* Header with Notification Title and Quick Sound Preview */}
+        {/* Header with Notification Title, Clear All, and Quick Sound Preview */}
         <div className="flex items-center justify-between border-b border-border bg-surface/50 px-3.5 py-2.5">
           <div className="flex items-center gap-2">
             <span className="text-[13.5px] font-bold text-foreground">Notifications</span>
-            {totalCount > 0 && (
+            {totalCount > 0 ? (
               <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-600 dark:text-amber-400">
                 {totalCount}
+              </span>
+            ) : (
+              <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                0
               </span>
             )}
           </div>
           <div className="flex items-center gap-1.5">
+            {activeNotifications.length > 0 && (
+              <button
+                onClick={handleClearAll}
+                type="button"
+                className="text-[11px] font-medium text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1 px-2 py-1 rounded-md hover:bg-destructive/10"
+                title="Clear all notifications"
+              >
+                <Trash2 className="size-3" />
+                <span>Clear messages</span>
+              </button>
+            )}
             <button
               onClick={() => {
                 soundService.playPreset(selectedSound);
-                toast.info(`Playing active sound: ${SOUND_PRESETS.find((p) => p.id === selectedSound)?.name || "Chime"} 🔔`);
+                toast.info(`Playing sound: ${SOUND_PRESETS.find((p) => p.id === selectedSound)?.name || "Chime"} 🔔`, { duration: 2500 });
               }}
               type="button"
               className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/60 hover:bg-secondary"
@@ -343,14 +414,6 @@ function NotificationBell() {
               <Volume2 className="size-3.5 text-primary" />
               <span>Test sound</span>
             </button>
-            {overdueFollowUps.length > 0 && (
-              <button
-                onClick={handleClearAllOverdue}
-                className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors px-1.5 py-1 rounded hover:bg-secondary"
-              >
-                Clear overdue
-              </button>
-            )}
           </div>
         </div>
 
@@ -366,9 +429,9 @@ function NotificationBell() {
             )}
           >
             All
-            <span className="text-[10px] opacity-70">({allNotifications.length})</span>
+            <span className="text-[10px] opacity-70">({activeNotifications.length})</span>
           </button>
-          {interestList.length > 0 && (
+          {activeInterest.length > 0 && (
             <button
               onClick={() => setActiveTab("interested")}
               className={cn(
@@ -380,10 +443,10 @@ function NotificationBell() {
             >
               <Lightbulb className="size-3 text-amber-500" />
               Interested
-              <span className="text-[10px] font-bold">({interestList.length})</span>
+              <span className="text-[10px] font-bold">({activeInterest.length})</span>
             </button>
           )}
-          {(upcomingFollowUps.length > 0 || overdueFollowUps.length > 0) && (
+          {activeFollowups.length > 0 && (
             <button
               onClick={() => setActiveTab("followups")}
               className={cn(
@@ -395,9 +458,7 @@ function NotificationBell() {
             >
               <Clock className="size-3 text-primary" />
               Follow-ups
-              <span className="text-[10px] opacity-70">
-                ({upcomingFollowUps.length + overdueFollowUps.length})
-              </span>
+              <span className="text-[10px] opacity-70">({activeFollowups.length})</span>
             </button>
           )}
           <button
@@ -411,7 +472,7 @@ function NotificationBell() {
             title="Choose from 6 notification sounds"
           >
             <Settings className="size-3" />
-            <span>Sound Options (6)</span>
+            <span>Sounds (6)</span>
           </button>
         </div>
 
@@ -492,8 +553,24 @@ function NotificationBell() {
               </div>
             </div>
           ) : visibleNotifications.length === 0 ? (
-            <div className="py-8 text-center text-[13px] text-muted-foreground">
-              No pending notifications
+            <div className="py-10 px-4 text-center space-y-2">
+              <div className="mx-auto size-10 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                <CheckCircle2 className="size-5" />
+              </div>
+              <div className="text-[13.5px] font-semibold text-foreground">All caught up!</div>
+              <p className="text-[12px] text-muted-foreground max-w-[260px] mx-auto">
+                No active notifications right now. New lead interest alerts and follow-ups will appear here.
+              </p>
+              {clearedIds.size > 0 && (
+                <button
+                  onClick={handleRestoreCleared}
+                  type="button"
+                  className="mt-2 inline-flex items-center gap-1.5 text-[11.5px] font-medium text-primary hover:underline"
+                >
+                  <RotateCcw className="size-3" />
+                  Restore cleared ({clearedIds.size})
+                </button>
+              )}
             </div>
           ) : (
             <>
@@ -504,7 +581,7 @@ function NotificationBell() {
                   <div
                     key={item.id}
                     className={cn(
-                      "flex items-start gap-2.5 px-3.5 py-2.5 transition-colors",
+                      "group relative flex items-start gap-2.5 px-3.5 py-2.5 transition-colors",
                       item.type === "interested"
                         ? "bg-amber-500/5 hover:bg-amber-500/10"
                         : item.type === "overdue"
@@ -534,7 +611,7 @@ function NotificationBell() {
 
                     {/* Notification Details */}
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-1.5">
+                      <div className="flex items-center justify-between gap-1.5 pr-6">
                         <span className="truncate text-[13px] font-semibold text-foreground">
                           {item.title}
                         </span>
@@ -580,12 +657,39 @@ function NotificationBell() {
                         </div>
                       )}
                     </div>
+
+                    {/* Individual Close / Dismiss 'X' Button on top-right */}
+                    <button
+                      onClick={(e) => handleDismissOne(item.id, e)}
+                      type="button"
+                      className="absolute top-2 right-2 size-5 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors opacity-70 group-hover:opacity-100"
+                      title="Dismiss notification"
+                      aria-label="Dismiss notification"
+                    >
+                      <X className="size-3" />
+                    </button>
                   </div>
                 );
               })}
             </>
           )}
         </div>
+
+        {/* Footer Link to Interested Clients page if Admin */}
+        {isAdmin && (
+          <div className="border-t border-border bg-muted/30 px-3.5 py-2 flex items-center justify-between text-[11.5px]">
+            <span className="text-muted-foreground font-medium">
+              Dedicated leads section
+            </span>
+            <Link
+              to="/admin/interested"
+              className="font-semibold text-primary hover:underline flex items-center gap-1"
+            >
+              <span>Interested Clients</span>
+              <Sparkles className="size-3" />
+            </Link>
+          </div>
+        )}
 
         {/* Footer / Pagination Controls if more than 5-6 notifications */}
         {activeTab !== "sounds" && filteredNotifications.length > DISPLAY_LIMIT && (

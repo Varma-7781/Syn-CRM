@@ -155,10 +155,10 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
                 // 1. Play real-time notification sound chime
                 playNotificationSound(0.5);
 
-                // 2. High-visibility in-app toast
+                // 2. High-visibility in-app toast (auto-dismisses cleanly in 3 seconds, includes X close)
                 toast.success(`💡 Client Interested: ${compName}`, {
                   description: `${repName} marked ${clientName} (${compName}) as Interested!`,
-                  duration: 9000,
+                  duration: 3000,
                 });
 
                 // 3. Desktop browser notification
