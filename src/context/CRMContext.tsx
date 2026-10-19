@@ -138,6 +138,8 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
 
           // Subsequent live real-time updates while Admin is actively logged in
           if (currentUser?.role === 'admin') {
+            const liveInterestedEvents: Lead[] = [];
+
             leadList.forEach((lead) => {
               const prevStatus = previousLeadsStatusRef.current.get(lead.id);
               const isNowInterested = lead.status === 'interested';
@@ -148,6 +150,16 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
               const isLiveEvent = interestedTimestamp > 0 && interestedTimestamp >= (sessionLoginTimeRef.current - 5000);
 
               if (isStatusTransition && isLiveEvent) {
+                liveInterestedEvents.push(lead);
+              }
+
+              // Keep baseline status map updated
+              previousLeadsStatusRef.current.set(lead.id, lead.status);
+            });
+
+            // Display notifications ONE AFTER ONE, each showing for 2.5s and disappearing cleanly!
+            liveInterestedEvents.forEach((lead, idx) => {
+              setTimeout(() => {
                 const repName = lead.interestedByName || lead.rep || lead.assignedToName || 'Sales Representative';
                 const compName = lead.companyName || lead.company || 'Unknown Client';
                 const clientName = lead.contactName || lead.client || 'Contact';
@@ -155,10 +167,10 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
                 // 1. Play real-time notification sound chime
                 playNotificationSound(0.5);
 
-                // 2. High-visibility in-app toast (auto-dismisses cleanly in 3 seconds, includes X close)
+                // 2. High-visibility in-app toast (auto-dismisses cleanly in 2.5 seconds, includes X close)
                 toast.success(`💡 Client Interested: ${compName}`, {
                   description: `${repName} marked ${clientName} (${compName}) as Interested!`,
-                  duration: 3000,
+                  duration: 2500,
                 });
 
                 // 3. Desktop browser notification
@@ -172,10 +184,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
                     n.onclick = () => window.focus();
                   } catch {}
                 }
-              }
-
-              // Keep baseline status map updated
-              previousLeadsStatusRef.current.set(lead.id, lead.status);
+              }, idx * 2800); // 2.8s apart: one after one!
             });
           } else {
             leadList.forEach((lead) => {
