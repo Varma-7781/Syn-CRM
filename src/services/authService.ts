@@ -12,7 +12,7 @@ import { doc, getDoc, getDocs, collection, setDoc, Timestamp } from 'firebase/fi
 import { auth, db, isFirebaseEnabled } from '../config/firebase';
 import { User } from '../types';
 
-const STORAGE_KEY = 'zoopiter_active_user';
+const STORAGE_KEY = 'syntraxs_active_user';
 
 /**
  * Ensures background Firebase Auth session is active so Firestore security rules pass
@@ -22,7 +22,7 @@ export const ensureFirebaseAuth = async (): Promise<boolean> => {
   if (auth.currentUser) return true;
 
   try {
-    await signInWithEmailAndPassword(auth, 'admin@zoopiter.com', 'admin123456');
+    await signInWithEmailAndPassword(auth, 'admin@syntraxs.com', 'password123');
     return true;
   } catch (err: any) {
     if (
@@ -31,7 +31,7 @@ export const ensureFirebaseAuth = async (): Promise<boolean> => {
       err?.code === 'auth/invalid-login-credentials'
     ) {
       try {
-        await createUserWithEmailAndPassword(auth, 'admin@zoopiter.com', 'admin123456');
+        await createUserWithEmailAndPassword(auth, 'admin@syntraxs.com', 'password123');
         return true;
       } catch {
         // Ignored
@@ -146,7 +146,7 @@ export const loginUser = async (
 export const getActiveUser = (): User | null => {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('zoopiter_active_user');
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -160,6 +160,7 @@ export const logoutUser = async (): Promise<void> => {
   if (typeof window !== 'undefined') {
     try {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem('zoopiter_active_user');
     } catch (error: any) {
       console.error('❌ [AUTH] Logout failed:', error.message);
     }

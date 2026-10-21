@@ -11,7 +11,7 @@ export function LoginScreen() {
     <div className="relative min-h-screen lg:h-screen lg:min-h-0 lg:max-h-screen overflow-x-hidden overflow-y-auto lg:overflow-hidden bg-background lg:grid lg:grid-cols-[1.12fr_1fr]">
       <BrandSide />
       <div className="relative flex min-h-screen lg:min-h-0 lg:h-full lg:max-h-screen flex-col justify-between overflow-x-hidden overflow-y-auto lg:overflow-hidden bg-background">
-        {/* Full Business Doodle Pattern Background (Inspired by Zoopiter CRM) */}
+        {/* Full Business Doodle Pattern Background (Syntraxs CRM) */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 z-0 login-doodle-bg"
@@ -57,8 +57,8 @@ function LoginForm() {
   const navigate = useNavigate();
   const { login } = useCRM();
   const [role, setRole] = useState<"admin" | "sales">("admin");
-  const [email, setEmail] = useState("");
-  const [pw, setPw] = useState("");
+  const [email, setEmail] = useState("admin@syntraxs.com");
+  const [pw, setPw] = useState("password123");
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState({ email: false, pw: false });
@@ -66,6 +66,18 @@ function LoginForm() {
 
   const emailErr = touched.email && !/^\S+@\S+\.\S+$/.test(email) ? "Enter a valid work email" : null;
   const pwErr = touched.pw && pw.length < 6 ? "Password must be at least 6 characters" : null;
+
+  const handleRoleChange = (newRole: "admin" | "sales") => {
+    setRole(newRole);
+    if (newRole === "admin") {
+      setEmail("admin@syntraxs.com");
+      setPw("password123");
+    } else {
+      setEmail("sales@syntraxs.com");
+      setPw("password123");
+    }
+    setError(null);
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -91,7 +103,7 @@ function LoginForm() {
   };
 
   return (
-    <form onSubmit={submit} noValidate className="w-full">
+    <form onSubmit={submit} noValidate autoComplete="off" className="w-full">
       <div className="animate-rise" style={{ animationDelay: "350ms" }}>
         <div className="eyebrow mb-1.5 flex items-center gap-2"><span className="size-1.5 rounded-full bg-success animate-pulse-dot" /> Workspace · syntraxs.crm</div>
         <h1 className="text-[23px] font-bold tracking-[-0.02em] text-foreground sm:text-[25px]">Welcome back</h1>
@@ -104,7 +116,7 @@ function LoginForm() {
           <div role="radiogroup" aria-label="Role" className="relative grid grid-cols-2 rounded-lg border border-border bg-surface p-1">
             <span aria-hidden className={cn("absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-md border border-border-strong bg-elevated shadow-pop transition-transform duration-300 ease-[var(--ease-out)]", role === "sales" && "translate-x-full")} />
             {(["admin", "sales"] as const).map((r) => (
-              <button key={r} type="button" role="radio" aria-checked={role === r} onClick={() => setRole(r)}
+              <button key={r} type="button" role="radio" aria-checked={role === r} onClick={() => handleRoleChange(r)}
                 className={cn("relative z-10 h-8 rounded-md text-[12.5px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", role === r ? "font-semibold text-foreground" : "font-medium text-muted-foreground hover:text-foreground")}>
                 {r === "admin" ? "Admin" : "Sales"}
               </button>
@@ -140,7 +152,7 @@ function LoginForm() {
         </div>
 
         <Field id="email" label="Work email" icon={Mail} error={emailErr}>
-          <input id="email" type="email" autoComplete="email" value={email} placeholder="name@syntraxs.com"
+          <input id="email" type="email" autoComplete="off" value={email} placeholder="admin@syntraxs.com"
             onChange={(e) => setEmail(e.target.value)} onBlur={() => setTouched((t) => ({ ...t, email: true }))}
             className="h-full w-full bg-transparent text-[13.5px] text-foreground outline-none placeholder:text-muted-foreground" />
         </Field>
@@ -156,7 +168,7 @@ function LoginForm() {
             <EyeOff className={cn("absolute inset-0 m-auto size-3.5 transition-all duration-200", show ? "opacity-100" : "scale-50 opacity-0")} />
           </button>
         } labelAction={<a href="#" className="text-[11.5px] font-medium text-primary hover:underline">Forgot?</a>}>
-          <input id="pw" type={show ? "text" : "password"} autoComplete="current-password" value={pw} placeholder="••••••••"
+          <input id="pw" type={show ? "text" : "password"} autoComplete="new-password" value={pw} placeholder="••••••••"
             onChange={(e) => setPw(e.target.value)} onBlur={() => setTouched((t) => ({ ...t, pw: true }))}
             className="h-full w-full bg-transparent text-[13.5px] text-foreground outline-none placeholder:text-muted-foreground" />
         </Field>
