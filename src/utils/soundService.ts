@@ -5,6 +5,8 @@
  * Automatically handles browser autoplay unlock policies.
  */
 
+import { logger } from '../lib/logger';
+
 export interface SoundPreset {
   id: string;
   name: string;
@@ -200,8 +202,8 @@ class SoundService {
           this.synthClassicChime(ctx, vol);
           break;
       }
-    } catch (err) {
-      console.warn('[SoundService] Synthesis failed, playing fallback:', err);
+    } catch {
+      logger.warn('[SoundService] Web Audio synthesis unavailable, playing audio fallback');
       this.playFallback();
     }
   }

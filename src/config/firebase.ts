@@ -7,6 +7,7 @@ import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import type { Analytics } from 'firebase/analytics';
 import type { Messaging } from 'firebase/messaging';
+import { logger } from '../lib/logger';
 
 // Official Production Firebase Configuration for SYNTRAXS CRM
 const SYNTRAXS_FIREBASE_CONFIG = {
@@ -66,11 +67,11 @@ if (isFirebaseConfigured()) {
         }).catch(() => {});
       }).catch(() => {});
     }
-  } catch (error) {
-    console.error('❌ [FIREBASE] Initialization failed:', error);
+  } catch {
+    logger.error('[FIREBASE] Initialization failed');
   }
 } else {
-  console.warn('❗ [FIREBASE] Firebase configuration is incomplete in .env');
+  logger.warn('[FIREBASE] Firebase configuration is incomplete in environment variables');
 }
 
 export { app, auth, db, analytics, messaging };

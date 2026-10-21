@@ -15,6 +15,15 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Lead } from "@/types";
 
+function sanitizeCsvCell(val: unknown): string {
+  if (val === null || val === undefined) return '""';
+  let str = String(val).trim();
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
+  return `"${str.replace(/"/g, '""')}"`;
+}
+
 export const Route = createFileRoute("/admin/interested")({
   head: () => ({
     meta: [
@@ -98,15 +107,15 @@ function InterestedPage() {
 
     const headers = ["Company Name", "Contact Person", "Phone", "Email", "Requirement", "Expected Value", "Marked Interested By", "Interested At", "Category"];
     const rows = filteredRows.map((l) => [
-      `"${(l.companyName || l.company || "").replace(/"/g, '""')}"`,
-      `"${(l.contactName || l.client || "").replace(/"/g, '""')}"`,
-      `"${l.phone || ""}"`,
-      `"${l.email || ""}"`,
-      `"${(l.requirement || "").replace(/"/g, '""')}"`,
-      `"${l.value || 0}"`,
-      `"${(l.interestedByName || l.rep || l.assignedToName || "").replace(/"/g, '""')}"`,
-      `"${l.interestedAt ? new Date(l.interestedAt).toLocaleString() : ""}"`,
-      `"${l.category || "General"}"`,
+      sanitizeCsvCell(l.companyName || l.company || ""),
+      sanitizeCsvCell(l.contactName || l.client || ""),
+      sanitizeCsvCell(l.phone || ""),
+      sanitizeCsvCell(l.email || ""),
+      sanitizeCsvCell(l.requirement || ""),
+      l.value || 0,
+      sanitizeCsvCell(l.interestedByName || l.rep || l.assignedToName || ""),
+      sanitizeCsvCell(l.interestedAt ? new Date(l.interestedAt).toLocaleString() : ""),
+      sanitizeCsvCell(l.category || "General"),
     ]);
 
     const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");

@@ -5,62 +5,51 @@
 
 import {
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   User as FirebaseUser,
 } from 'firebase/auth';
-import { doc, getDoc, getDocs, collection, setDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, query, where, limit } from 'firebase/firestore';
 import { auth, db, isFirebaseEnabled } from '../config/firebase';
 import { User } from '../types';
+import { logger, maskEmail } from '../lib/logger';
 
 const STORAGE_KEY = 'syntraxs_active_user';
 
 /**
- * Ensures background Firebase Auth session is active so Firestore security rules pass
+ * Checks whether an active Firebase Auth session exists.
+ * Does NOT sign in with hardcoded credentials or bypass security.
  */
 export const ensureFirebaseAuth = async (): Promise<boolean> => {
   if (!isFirebaseEnabled() || !auth) return false;
-  if (auth.currentUser) return true;
-
-  try {
-    await signInWithEmailAndPassword(auth, 'admin@syntraxs.com', 'password123');
-    return true;
-  } catch (err: any) {
-    if (
-      err?.code === 'auth/user-not-found' ||
-      err?.code === 'auth/invalid-credential' ||
-      err?.code === 'auth/invalid-login-credentials'
-    ) {
-      try {
-        await createUserWithEmailAndPassword(auth, 'admin@syntraxs.com', 'password123');
-        return true;
-      } catch {
-        // Ignored
-      }
-    }
-    return false;
-  }
+  return !!auth.currentUser;
 };
 
 /**
- * Find user in Firestore by email
+ * Find user in Firestore by email using a targeted query
  */
 export const findUserByEmail = async (email: string): Promise<User | null> => {
   const normalized = email.trim().toLowerCase();
   if (!isFirebaseEnabled() || !db) return null;
 
   try {
-    const usersSnapshot = await getDocs(collection(db, 'users'));
-    for (const d of usersSnapshot.docs) {
-      const data = d.data();
-      if (data.email && data.email.toLowerCase() === normalized) {
-        return {
-          id: d.id,
-          ...data,
-        } as User;
-      }
+    const q = query(collection(db, 'users'), where('email', '==', normalized), limit(1));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      const docItem = snap.docs[0];
+      return { id: docItem.id, ...docItem.data() } as User;
     }
-  } catch (error) {
-    console.warn('Could not query users from Firestore:', error);
+  } catch {
+    // Targeted query fallback
+    try {
+      const allSnap = await getDocs(collection(db, 'users'));
+      for (const d of allSnap.docs) {
+        const data = d.data();
+        if (data.email && data.email.toLowerCase() === normalized) {
+          return { id: d.id, ...data } as User;
+        }
+      }
+    } catch {
+      logger.warn('[AUTH] Could not query user profile from Firestore');
+    }
   }
   return null;
 };
@@ -98,7 +87,7 @@ export const loginUser = async (
     const cred = await signInWithEmailAndPassword(auth, cleanEmail, cleanPassword);
     authUser = cred.user;
   } catch (err: any) {
-    console.warn('❌ [AUTH] Sign in failed for:', cleanEmail, err?.code, err?.message);
+    logger.warn(`[AUTH] Sign in failed for: ${maskEmail(cleanEmail)} (code: ${err?.code || 'unknown'})`);
     const code = err?.code || '';
     if (
       code === 'auth/invalid-credential' ||
@@ -117,7 +106,7 @@ export const loginUser = async (
     if (code === 'auth/network-request-failed') {
       throw new Error('Network connection failed. Please check your internet and try again.');
     }
-    throw new Error(err?.message || 'Authentication failed. Please verify your credentials.');
+    throw new Error('Authentication failed. Please verify your credentials and try again.');
   }
 
   // Look for registered CRM user profile in Firestore:
@@ -129,8 +118,8 @@ export const loginUser = async (
     if (userDocSnap.exists()) {
       user = { id: userDocSnap.id, ...userDocSnap.data() } as User;
     }
-  } catch (fetchErr: any) {
-    console.warn('Could not fetch user profile by UID:', fetchErr?.message);
+  } catch {
+    logger.warn('[AUTH] Could not fetch user profile by UID');
   }
 
   // 2. Fallback check by email in case of mapped Firestore profile
@@ -172,15 +161,15 @@ export const logoutUser = async (): Promise<void> => {
     try {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem('zoopiter_active_user');
-    } catch (error: any) {
-      console.error('❌ [AUTH] Logout failed:', error.message);
+    } catch {
+      logger.error('[AUTH] Local session cleanup failed');
     }
   }
   if (auth) {
     try {
       await auth.signOut();
-    } catch (err: any) {
-      console.warn('Firebase signout warning:', err.message);
+    } catch {
+      logger.warn('[AUTH] Firebase signout encountered an issue');
     }
   }
 };
@@ -214,8 +203,8 @@ export const getUserData = async (uid: string): Promise<User | null> => {
     const userDoc = await getDoc(doc(db, 'users', uid));
     if (!userDoc.exists()) return null;
     return { ...userDoc.data() as User, id: uid };
-  } catch (error: any) {
-    console.error('❌ [AUTH] Failed to get user data:', error.message);
+  } catch {
+    logger.error('[AUTH] Failed to fetch user profile by UID');
     return null;
   }
 };

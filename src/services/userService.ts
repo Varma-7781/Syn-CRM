@@ -4,7 +4,7 @@
  */
 
 import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signOut, deleteUser as deleteAuthUser } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, deleteUser as deleteAuthUser } from 'firebase/auth';
 import {
   collection,
   doc,
@@ -20,6 +20,8 @@ import {
 } from 'firebase/firestore';
 import { firebaseConfig, auth, db, isFirebaseEnabled } from '../config/firebase';
 import { User, CreateSalesRepresentativeInput } from '../types';
+import { logger, maskEmail } from '../lib/logger';
+import { getActiveUser } from './authService';
 
 const COLLECTION_NAME = 'users';
 
@@ -33,8 +35,8 @@ export const getAllUsers = async (): Promise<User[]> => {
   try {
     const usersSnapshot = await getDocs(collection(db!, COLLECTION_NAME));
     return usersSnapshot.docs.map((d) => ({ id: d.id, ...d.data() } as User));
-  } catch (error: any) {
-    console.error('❌ [USERS] Failed to fetch users:', error.message);
+  } catch {
+    logger.error('[USERS] Failed to fetch users');
     return [];
   }
 };
@@ -48,8 +50,8 @@ export const getUserById = async (userId: string): Promise<User | null> => {
     const userDoc = await getDoc(doc(db!, COLLECTION_NAME, userId));
     if (!userDoc.exists()) return null;
     return { id: userDoc.id, ...userDoc.data() } as User;
-  } catch (error: any) {
-    console.error('❌ [USERS] Failed to fetch user:', error.message);
+  } catch {
+    logger.error('[USERS] Failed to fetch user');
     return null;
   }
 };
@@ -70,8 +72,8 @@ export const addUser = async (userData: Omit<User, 'id'>): Promise<string | null
       createdAt: Timestamp.now(),
     });
     return uid;
-  } catch (error: any) {
-    console.error('❌ [USERS] Failed to create user:', error.message);
+  } catch {
+    logger.error('[USERS] Failed to create user');
     return null;
   }
 };
@@ -87,8 +89,8 @@ export const updateUser = async (userId: string, updates: Partial<User>): Promis
       updatedAt: Timestamp.now(),
     });
     return true;
-  } catch (error: any) {
-    console.error('❌ [USERS] Failed to update user:', error.message);
+  } catch {
+    logger.error('[USERS] Failed to update user');
     return false;
   }
 };
@@ -103,6 +105,13 @@ export const createSalesUser = async (
 ): Promise<{ success: boolean; user?: User; error?: string }> => {
   if (!guardFirebase()) {
     return { success: false, error: 'Firebase is not initialized or offline.' };
+  }
+
+  // Enforce Authorization: Only CRM administrators can provision users
+  const activeUser = getActiveUser();
+  if (!activeUser || activeUser.role !== 'admin') {
+    logger.warn('[USERS] Unauthorized user provisioning attempt rejected');
+    return { success: false, error: 'Unauthorized: Only CRM administrators can create sales representatives.' };
   }
 
   // 1. Validate inputs
@@ -129,8 +138,8 @@ export const createSalesUser = async (
     if (duplicate) {
       return { success: false, error: 'A user with this email already exists in the CRM.' };
     }
-  } catch (err: any) {
-    console.warn('Could not check existing users:', err.message);
+  } catch {
+    logger.warn('[USERS] Could not check existing users');
   }
 
   // 3. Optional server endpoint invocation if configured
@@ -158,8 +167,8 @@ export const createSalesUser = async (
         return { success: false, error: data.error || 'Server error creating user' };
       }
       return { success: true, user: data.user };
-    } catch (fnErr: any) {
-      console.warn('Cloud Function unavailable, using direct isolated secondary auth provisioning:', fnErr.message);
+    } catch {
+      logger.warn('[USERS] Cloud Function unavailable, using direct isolated secondary auth provisioning');
     }
   }
 
@@ -196,7 +205,7 @@ export const createSalesUser = async (
     }
     return {
       success: false,
-      error: authErr.message || 'Failed to create user in Firebase Authentication.',
+      error: 'Failed to create user in Firebase Authentication. Please verify details.',
     };
   }
 
@@ -214,7 +223,7 @@ export const createSalesUser = async (
 
     await setDoc(doc(db!, COLLECTION_NAME, authUid), {
       ...userProfile,
-      createdBy: auth?.currentUser?.uid || 'admin',
+      createdBy: auth?.currentUser?.uid || activeUser.id || 'admin',
     });
 
     // 6. Create monthly target quota for the new rep in Firestore
@@ -231,19 +240,19 @@ export const createSalesUser = async (
     });
 
     return { success: true, user: userProfile };
-  } catch (firestoreErr: any) {
-    console.error('❌ [USERS] Firestore profile creation failed:', firestoreErr);
+  } catch {
+    logger.error('[USERS] Firestore profile creation failed');
 
     // Rollback: Attempt cleanup of newly created Auth user to avoid orphan account
     if (createdAuthUser) {
       try {
         const cleanupApp = initializeApp(firebaseConfig, `cleanup-${Date.now()}`);
         const cleanupAuth = getAuth(cleanupApp);
-        const reSign = await createUserWithEmailAndPassword(cleanupAuth, cleanEmail, password);
+        const reSign = await signInWithEmailAndPassword(cleanupAuth, cleanEmail, password);
         await deleteAuthUser(reSign.user);
         await deleteApp(cleanupApp);
-      } catch (cleanErr: any) {
-        console.warn('Could not roll back auth account:', cleanErr.message);
+      } catch {
+        logger.warn('[USERS] Could not roll back auth account');
       }
     }
 
@@ -262,8 +271,8 @@ export const deleteUser = async (userId: string): Promise<boolean> => {
   try {
     await deleteDoc(doc(db!, COLLECTION_NAME, userId));
     return true;
-  } catch (error: any) {
-    console.error('❌ [USERS] Failed to delete user:', error.message);
+  } catch {
+    logger.error('[USERS] Failed to delete user');
     return false;
   }
 };
@@ -281,8 +290,8 @@ export const subscribeToUsers = (callback: (users: User[]) => void) => {
       const users = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as User));
       callback(users);
     },
-    (error) => {
-      console.error('❌ [USERS] Subscription error:', error.message);
+    () => {
+      logger.error('[USERS] Users subscription interrupted');
     }
   );
 };

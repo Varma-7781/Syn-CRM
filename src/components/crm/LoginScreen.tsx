@@ -58,8 +58,8 @@ function LoginForm() {
   const navigate = useNavigate();
   const { login } = useCRM();
   const [role, setRole] = useState<"admin" | "sales">("admin");
-  const [email, setEmail] = useState("admin@syntraxs.com");
-  const [pw, setPw] = useState("password123");
+  const [email, setEmail] = useState(import.meta.env.DEV ? "admin@syntraxs.com" : "");
+  const [pw, setPw] = useState(import.meta.env.DEV ? "password123" : "");
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState({ email: false, pw: false });
@@ -70,12 +70,17 @@ function LoginForm() {
 
   const handleRoleChange = (newRole: "admin" | "sales") => {
     setRole(newRole);
-    if (newRole === "admin") {
-      setEmail("admin@syntraxs.com");
-      setPw("password123");
+    if (import.meta.env.DEV) {
+      if (newRole === "admin") {
+        setEmail("admin@syntraxs.com");
+        setPw("password123");
+      } else {
+        setEmail("sales@syntraxs.com");
+        setPw("password123");
+      }
     } else {
-      setEmail("sales@syntraxs.com");
-      setPw("password123");
+      setEmail("");
+      setPw("");
     }
     setError(null);
   };
@@ -140,7 +145,11 @@ function LoginForm() {
                 onClick={() => {
                   setRole(q.role);
                   setEmail(q.email);
-                  setPw("password123");
+                  if (import.meta.env.DEV) {
+                    setPw("password123");
+                  } else {
+                    setPw("");
+                  }
                   setError(null);
                 }}
                 className={cn(

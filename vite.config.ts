@@ -12,4 +12,12 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    build: {
+      sourcemap: false,
+    },
+    esbuild: {
+      pure: process.env.NODE_ENV === "production" ? ["console.log", "console.debug", "console.info"] : [],
+    },
+  },
 });

@@ -19,6 +19,7 @@ import {
 } from 'firebase/firestore';
 import { db, isFirebaseEnabled } from '../config/firebase';
 import { Target } from '../types';
+import { logger } from '../lib/logger';
 
 const COLLECTION_NAME = 'targets';
 
@@ -32,8 +33,8 @@ export const getAllTargets = async (): Promise<Target[]> => {
   try {
     const targetsSnapshot = await getDocs(collection(db!, COLLECTION_NAME));
     return targetsSnapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Target));
-  } catch (error: any) {
-    console.error('❌ [TARGETS] Failed to fetch targets:', error.message);
+  } catch {
+    logger.error('[TARGETS] Failed to fetch targets');
     return [];
   }
 };
@@ -47,8 +48,8 @@ export const getTargetById = async (targetId: string): Promise<Target | null> =>
     const targetDoc = await getDoc(doc(db!, COLLECTION_NAME, targetId));
     if (!targetDoc.exists()) return null;
     return { id: targetDoc.id, ...targetDoc.data() } as Target;
-  } catch (error: any) {
-    console.error('❌ [TARGETS] Failed to fetch target:', error.message);
+  } catch {
+    logger.error('[TARGETS] Failed to fetch target');
     return null;
   }
 };
@@ -62,8 +63,8 @@ export const getTargetsByUser = async (userId: string): Promise<Target[]> => {
     const q = query(collection(db!, COLLECTION_NAME), where('userId', '==', userId));
     const targetsSnapshot = await getDocs(q);
     return targetsSnapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Target));
-  } catch (error: any) {
-    console.error('❌ [TARGETS] Failed to fetch user targets:', error.message);
+  } catch {
+    logger.error('[TARGETS] Failed to fetch user targets');
     return [];
   }
 };
@@ -80,8 +81,8 @@ export const addTarget = async (targetData: Omit<Target, 'id' | 'achieved'> & { 
       createdAt: Timestamp.now(),
     });
     return docRef.id;
-  } catch (error: any) {
-    console.error('❌ [TARGETS] Failed to create target:', error.message);
+  } catch {
+    logger.error('[TARGETS] Failed to create target');
     return null;
   }
 };
@@ -97,8 +98,8 @@ export const updateTarget = async (targetId: string, updates: Partial<Target>): 
       updatedAt: Timestamp.now(),
     });
     return true;
-  } catch (error: any) {
-    console.error('❌ [TARGETS] Failed to update target:', error.message);
+  } catch {
+    logger.error('[TARGETS] Failed to update target');
     return false;
   }
 };
@@ -111,8 +112,8 @@ export const deleteTarget = async (targetId: string): Promise<boolean> => {
   try {
     await deleteDoc(doc(db!, COLLECTION_NAME, targetId));
     return true;
-  } catch (error: any) {
-    console.error('❌ [TARGETS] Failed to delete target:', error.message);
+  } catch {
+    logger.error('[TARGETS] Failed to delete target');
     return false;
   }
 };
@@ -130,8 +131,8 @@ export const subscribeToTargets = (callback: (targets: Target[]) => void) => {
       const targets = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Target));
       callback(targets);
     },
-    (error) => {
-      console.error('❌ [TARGETS] Subscription error:', error.message);
+    () => {
+      logger.error('[TARGETS] Realtime targets subscription interrupted');
     }
   );
 };
@@ -153,8 +154,8 @@ export const subscribeToUserTargets = (userId: string, callback: (targets: Targe
       const targets = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Target));
       callback(targets);
     },
-    (error) => {
-      console.error('❌ [TARGETS] Subscription error:', error.message);
+    () => {
+      logger.error('[TARGETS] User targets subscription interrupted');
     }
   );
 };

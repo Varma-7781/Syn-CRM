@@ -14,6 +14,7 @@ import { isFirebaseEnabled } from '../config/firebase';
 import { FollowUpReminderPopup } from '../components/crm/FollowUpReminderPopup';
 import { playNotificationSound } from '../utils/soundService';
 import { toast } from 'sonner';
+import { logger } from '../lib/logger';
 
 interface UpcomingFollowUp {
   lead: Lead;
@@ -120,7 +121,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     const startSubscriptions = () => {
       if (cancelled) return;
 
-      unsubLeads = leadService.subscribeToLeads((fetchedLeads) => {
+      const handleLeadsSnapshot = (fetchedLeads: Lead[]) => {
         if (!cancelled) {
           const leadList = fetchedLeads || [];
           setLeads(leadList);
@@ -176,11 +177,11 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
                   duration: 2500,
                 });
 
-                // 3. Desktop browser notification
+                // 3. Desktop browser notification (PII sanitized - phone numbers excluded)
                 if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
                   try {
                     const n = new Notification(`💡 Client Interested: ${compName}`, {
-                      body: `${repName} marked ${clientName} as Interested!\nPhone: ${lead.phone || 'N/A'}`,
+                      body: `${repName} marked ${clientName} (${compName}) as Interested!`,
                       icon: '/favicon.png',
                       tag: `interest-${lead.id}-${Date.now()}`,
                     });
@@ -195,7 +196,15 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
             });
           }
         }
-      });
+      };
+
+      // Least Privilege & Data Minimization:
+      // Admins subscribe to organization-wide leads; sales representatives subscribe only to assigned leads.
+      if (currentUser?.role === 'admin') {
+        unsubLeads = leadService.subscribeToLeads(handleLeadsSnapshot);
+      } else if (currentUser?.id) {
+        unsubLeads = leadService.subscribeToUserLeads(currentUser.id, handleLeadsSnapshot);
+      }
 
       unsubUsers = userService.subscribeToUsers((fetchedUsers) => {
         if (!cancelled) {
@@ -234,7 +243,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       });
     };
 
-    // Ensure Firebase Auth session is verified before attaching Firestore listeners
+    // Verify Firebase Auth session before attaching Firestore listeners
     authService
       .ensureFirebaseAuth()
       .then((ready) => {
@@ -244,8 +253,8 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
           setLoading(false);
         }
       })
-      .catch((err) => {
-        console.error('❌ [CRM] Authentication failed before subscribing:', err);
+      .catch(() => {
+        logger.error('[CRM] Authentication session check failed before subscribing');
         if (!cancelled) setLoading(false);
       });
 
@@ -345,7 +354,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
           if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
             try {
               const n = new Notification(`🔔 Follow-up: ${lead.companyName || lead.company}`, {
-                body: `Scheduled in ${minutesRemaining}m with ${lead.contactName || lead.client} (${lead.phone})`,
+                body: `Scheduled in ${minutesRemaining}m with ${lead.contactName || lead.client}`,
                 icon: '/favicon.png',
                 tag: `followup-${lead.id}`,
               });

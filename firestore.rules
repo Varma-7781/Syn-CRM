@@ -1,0 +1,121 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==========================================
+    // ENTERPRISE ACCESS CONTROL & RBAC HELPERS
+    // ==========================================
+    
+    // Verifies client has an active Firebase Authentication session
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Fetches the caller's Firestore user profile
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Enforces strict role check via verified Firestore document.
+    // Explicitly avoids insecure email regex heuristics.
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role == 'admin';
+    }
+
+    // Verifies whether caller is the document owner
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Verifies whether caller is the assigned sales representative
+    function isAssignedRep(leadData) {
+      return isAuthenticated() && (
+        leadData.assignedTo == request.auth.uid ||
+        (leadData.assignedToName != null && leadData.assignedToName == getUserData().name) ||
+        (leadData.rep != null && leadData.rep == getUserData().name)
+      );
+    }
+
+    // ==========================================
+    // USERS COLLECTION
+    // ==========================================
+    match /users/{userId} {
+      // Authenticated team members can read team profiles for assignment and scorecards
+      allow read: if isAuthenticated();
+
+      // Only administrators can create users, or users setting their own profile with non-admin role
+      allow create: if isAdmin() || (isOwner(userId) && request.resource.data.role == 'sales');
+
+      // Users may update their own contact details, but CANNOT escalate their role to admin.
+      // Only existing admins can change user roles and department quotas.
+      allow update: if isAdmin() || (
+        isOwner(userId) && request.resource.data.role == resource.data.role
+      );
+
+      // Strictly restrict user deletion to administrators
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // LEADS COLLECTION
+    // ==========================================
+    match /leads/{leadId} {
+      // Admins can read all leads; reps can read assigned leads or unassigned pool
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        isAssignedRep(resource.data) ||
+        resource.data.assignedTo == null ||
+        !('assignedTo' in resource.data)
+      );
+
+      // Authenticated team members can create leads (manual entry or batch import)
+      allow create: if isAuthenticated();
+
+      // Admins can update any lead; reps can update their assigned leads or status transitions
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        isAssignedRep(resource.data) ||
+        // Follow-up reminder engine & interest tagging
+        request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'followUpStatus', 'followUpRemindedAt', 'followUpCompletedAt', 'followUpOverdueReason',
+          'status', 'interestedAt', 'interestedBy', 'interestedByName', 'lastContact'
+        ])
+      );
+
+      // Only administrators can permanently delete leads
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // TARGETS COLLECTION
+    // ==========================================
+    match /targets/{targetId} {
+      // Team members can view quotas for performance metrics and cockpit meters
+      allow read: if isAuthenticated();
+
+      // Only administrators can set or modify sales target quotas
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ==========================================
+    // ACTIVITIES COLLECTION
+    // ==========================================
+    match /activities/{activityId} {
+      // Authenticated team members can read activity logs
+      allow read: if isAuthenticated();
+
+      // Any authenticated team member can log calls, notes, or interactions
+      allow create: if isAuthenticated();
+
+      // Admins or activity authors can update/delete their own activity logs
+      allow update, delete: if isAdmin() || (
+        isAuthenticated() && resource.data.userId == request.auth.uid
+      );
+    }
+
+    // Default deny all other unspecified paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

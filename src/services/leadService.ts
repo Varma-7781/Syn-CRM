@@ -19,6 +19,7 @@ import {
 } from 'firebase/firestore';
 import { db, isFirebaseEnabled } from '../config/firebase';
 import { Lead } from '../types';
+import { logger } from '../lib/logger';
 
 const COLLECTION_NAME = 'leads';
 
@@ -71,8 +72,8 @@ export const getAllLeads = async (): Promise<Lead[]> => {
   try {
     const leadsSnapshot = await getDocs(collection(db!, COLLECTION_NAME));
     return leadsSnapshot.docs.map((d, i) => normalizeLead({ id: d.id, ...d.data() }, i));
-  } catch (error: any) {
-    console.error('❌ [LEADS] Failed to fetch leads:', error.message);
+  } catch {
+    logger.error('[LEADS] Failed to fetch leads');
     return [];
   }
 };
@@ -86,8 +87,8 @@ export const getLeadById = async (leadId: string): Promise<Lead | null> => {
     const leadDoc = await getDoc(doc(db!, COLLECTION_NAME, leadId));
     if (!leadDoc.exists()) return null;
     return normalizeLead({ id: leadDoc.id, ...leadDoc.data() });
-  } catch (error: any) {
-    console.error('❌ [LEADS] Failed to fetch lead:', error.message);
+  } catch {
+    logger.error('[LEADS] Failed to fetch lead');
     return null;
   }
 };
@@ -101,8 +102,8 @@ export const getLeadsByUser = async (userId: string): Promise<Lead[]> => {
     const q = query(collection(db!, COLLECTION_NAME), where('assignedTo', '==', userId));
     const leadsSnapshot = await getDocs(q);
     return leadsSnapshot.docs.map((d, i) => normalizeLead({ id: d.id, ...d.data() }, i));
-  } catch (error: any) {
-    console.error('❌ [LEADS] Failed to fetch user leads:', error.message);
+  } catch {
+    logger.error('[LEADS] Failed to fetch user leads');
     return [];
   }
 };
@@ -144,8 +145,8 @@ export const addLead = async (leadData: Partial<Lead>): Promise<string | null> =
 
     const docRef = await addDoc(collection(db!, COLLECTION_NAME), payload);
     return docRef.id;
-  } catch (error: any) {
-    console.error('❌ [LEADS] Failed to create lead:', error.message);
+  } catch {
+    logger.error('[LEADS] Failed to create lead');
     return null;
   }
 };
@@ -168,8 +169,8 @@ export const updateLead = async (leadId: string, updates: Partial<Lead>): Promis
 
     await updateDoc(doc(db!, COLLECTION_NAME, leadId), payload);
     return true;
-  } catch (error: any) {
-    console.error('❌ [LEADS] Failed to update lead:', error.message);
+  } catch {
+    logger.error('[LEADS] Failed to update lead');
     return false;
   }
 };
@@ -182,8 +183,8 @@ export const deleteLead = async (leadId: string): Promise<boolean> => {
   try {
     await deleteDoc(doc(db!, COLLECTION_NAME, leadId));
     return true;
-  } catch (error: any) {
-    console.error('❌ [LEADS] Failed to delete lead:', error.message);
+  } catch {
+    logger.error('[LEADS] Failed to delete lead');
     return false;
   }
 };
@@ -202,8 +203,8 @@ export const subscribeToLeads = (callback: (leads: Lead[]) => void) => {
       const leads = snapshot.docs.map((d, i) => normalizeLead({ id: d.id, ...d.data() }, i));
       callback(leads);
     },
-    (error) => {
-      console.error('❌ [LEADS] Subscription error:', error.message);
+    () => {
+      logger.error('[LEADS] Realtime subscription interrupted');
     }
   );
 };
@@ -225,8 +226,8 @@ export const subscribeToUserLeads = (userId: string, callback: (leads: Lead[]) =
       const leads = snapshot.docs.map((d, i) => normalizeLead({ id: d.id, ...d.data() }, i));
       callback(leads);
     },
-    (error) => {
-      console.error('❌ [LEADS] Subscription error:', error.message);
+    () => {
+      logger.error('[LEADS] User leads subscription interrupted');
     }
   );
 };

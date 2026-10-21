@@ -20,6 +20,7 @@ import {
 } from 'firebase/firestore';
 import { db, isFirebaseEnabled } from '../config/firebase';
 import { Activity } from '../types';
+import { logger } from '../lib/logger';
 
 const COLLECTION_NAME = 'activities';
 
@@ -76,8 +77,8 @@ export const getAllActivities = async (): Promise<Activity[]> => {
       query(collection(db!, COLLECTION_NAME), orderBy('timestamp', 'desc'))
     );
     return activitiesSnapshot.docs.map((d) => normalizeActivity({ id: d.id, ...d.data() }));
-  } catch (error: any) {
-    console.error('❌ [ACTIVITIES] Failed to fetch activities:', error.message);
+  } catch {
+    logger.error('[ACTIVITIES] Failed to fetch activities');
     return [];
   }
 };
@@ -91,8 +92,8 @@ export const getActivityById = async (activityId: string): Promise<Activity | nu
     const activityDoc = await getDoc(doc(db!, COLLECTION_NAME, activityId));
     if (!activityDoc.exists()) return null;
     return normalizeActivity({ id: activityDoc.id, ...activityDoc.data() });
-  } catch (error: any) {
-    console.error('❌ [ACTIVITIES] Failed to fetch activity:', error.message);
+  } catch {
+    logger.error('[ACTIVITIES] Failed to fetch activity');
     return null;
   }
 };
@@ -115,8 +116,8 @@ export const getActivitiesByUser = async (userId: string, limitCount?: number): 
 
     const activitiesSnapshot = await getDocs(q);
     return activitiesSnapshot.docs.map((d) => normalizeActivity({ id: d.id, ...d.data() }));
-  } catch (error: any) {
-    console.error('❌ [ACTIVITIES] Failed to fetch user activities:', error.message);
+  } catch {
+    logger.error('[ACTIVITIES] Failed to fetch user activities');
     return [];
   }
 };
@@ -132,8 +133,8 @@ export const getActivitiesByLead = async (leadId: string): Promise<Activity[]> =
     return activitiesSnapshot.docs
       .map((d) => normalizeActivity({ id: d.id, ...d.data() }))
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  } catch (error: any) {
-    console.error('❌ [ACTIVITIES] Failed to fetch lead activities:', error.message);
+  } catch {
+    logger.error('[ACTIVITIES] Failed to fetch lead activities');
     return [];
   }
 };
@@ -155,8 +156,8 @@ export const addActivity = async (
     };
     const docRef = await addDoc(collection(db!, COLLECTION_NAME), payload);
     return docRef.id;
-  } catch (error: any) {
-    console.error('❌ [ACTIVITIES] Failed to create activity:', error.message);
+  } catch {
+    logger.error('[ACTIVITIES] Failed to create activity');
     return null;
   }
 };
@@ -172,8 +173,8 @@ export const updateActivity = async (activityId: string, updates: Partial<Activi
       updatedAt: Timestamp.now(),
     });
     return true;
-  } catch (error: any) {
-    console.error('❌ [ACTIVITIES] Failed to update activity:', error.message);
+  } catch {
+    logger.error('[ACTIVITIES] Failed to update activity');
     return false;
   }
 };
@@ -186,8 +187,8 @@ export const deleteActivity = async (activityId: string): Promise<boolean> => {
   try {
     await deleteDoc(doc(db!, COLLECTION_NAME, activityId));
     return true;
-  } catch (error: any) {
-    console.error('❌ [ACTIVITIES] Failed to delete activity:', error.message);
+  } catch {
+    logger.error('[ACTIVITIES] Failed to delete activity');
     return false;
   }
 };
@@ -205,8 +206,8 @@ export const subscribeToActivities = (callback: (activities: Activity[]) => void
       const activities = snapshot.docs.map((d) => normalizeActivity({ id: d.id, ...d.data() }));
       callback(activities);
     },
-    (error) => {
-      console.error('❌ [ACTIVITIES] Subscription error:', error.message);
+    () => {
+      logger.error('[ACTIVITIES] Realtime activities subscription interrupted');
     }
   );
 };
@@ -228,8 +229,8 @@ export const subscribeToUserActivities = (userId: string, callback: (activities:
       const activities = snapshot.docs.map((d) => normalizeActivity({ id: d.id, ...d.data() }));
       callback(activities);
     },
-    (error) => {
-      console.error('❌ [ACTIVITIES] Subscription error:', error.message);
+    () => {
+      logger.error('[ACTIVITIES] User activities subscription interrupted');
     }
   );
 };

@@ -26,6 +26,22 @@ dist-ssr
 .env.*
 !.env.example
 
+# Service account keys and certificates
+serviceAccountKey*.json
+*service-account*.json
+*serviceAccount*.json
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+
+# Firebase debug logs
+firebase-debug*.log
+firestore-debug*.log
+ui-debug*.log
+
 # Scratch and test output
 scratch/
 

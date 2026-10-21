@@ -9,6 +9,24 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useCRM } from "@/context/CRMContext";
 import { toast } from "sonner";
 import { LEAD_STATUSES, STATUS_META } from "@/lib/crm-data";
+import { logger } from "@/lib/logger";
+
+const MAX_UPLOAD_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_IMPORT_ROWS = 500;
+const ALLOWED_EXTENSIONS = [".xlsx", ".xls", ".csv"];
+
+/**
+ * Sanitizes CSV cell contents against Formula Injection (CWE-1236).
+ * Escapes quotes and prefixes formula characters (=, +, -, @, \t, \r) with an apostrophe.
+ */
+function sanitizeCsvCell(val: unknown): string {
+  if (val === null || val === undefined) return '""';
+  let str = String(val).trim();
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
+  return `"${str.replace(/"/g, '""')}"`;
+}
 
 export const Route = createFileRoute("/admin/leads")({
   head: () => ({
@@ -141,6 +159,21 @@ function AdminLeadsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate file extension
+    const ext = "." + (file.name.split(".").pop() || "").toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      toast.error("Invalid file format. Please upload a .xlsx, .xls, or .csv file.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    // Validate file size (max 5 MB)
+    if (file.size > MAX_UPLOAD_SIZE) {
+      toast.error("File size exceeds 5 MB limit. Please upload a smaller file.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
@@ -152,6 +185,11 @@ function AdminLeadsPage() {
 
         if (!jsonData || jsonData.length < 2) {
           toast.error("File is empty or contains no data rows");
+          return;
+        }
+
+        if (jsonData.length > MAX_IMPORT_ROWS + 1) {
+          toast.error(`Spreadsheet exceeds maximum batch limit of ${MAX_IMPORT_ROWS} rows.`);
           return;
         }
 
@@ -221,9 +259,9 @@ function AdminLeadsPage() {
 
         toast.success(`Successfully imported ${imported} leads!`);
         setIsUploadOpen(false);
-      } catch (err: any) {
-        toast.error("Error processing file. Please check file format.");
-        console.error("Excel import error:", err);
+      } catch {
+        toast.error("Error processing file. Please verify file format.");
+        logger.error("[LEADS] Spreadsheet parsing failed");
       } finally {
         setUploading(false);
         if (fileInputRef.current) fileInputRef.current.value = "";
@@ -256,19 +294,19 @@ function AdminLeadsPage() {
     ];
 
     const rows = leads.map((l, i) => [
-      l.id || `L-${1000 + i}`,
-      `"${(l.companyName || l.company || "").replace(/"/g, '""')}"`,
-      `"${(l.contactName || l.client || "").replace(/"/g, '""')}"`,
-      `"${(l.designation || "").replace(/"/g, '""')}"`,
-      `"${(l.phone || "").replace(/"/g, '""')}"`,
-      `"${(l.email || "").replace(/"/g, '""')}"`,
-      `"${(l.category || "").replace(/"/g, '""')}"`,
-      `"${(l.requirement || "").replace(/"/g, '""')}"`,
+      sanitizeCsvCell(l.id || `L-${1000 + i}`),
+      sanitizeCsvCell(l.companyName || l.company || ""),
+      sanitizeCsvCell(l.contactName || l.client || ""),
+      sanitizeCsvCell(l.designation || ""),
+      sanitizeCsvCell(l.phone || ""),
+      sanitizeCsvCell(l.email || ""),
+      sanitizeCsvCell(l.category || ""),
+      sanitizeCsvCell(l.requirement || ""),
       l.value || 0,
-      l.status || "new",
-      l.priority || "medium",
-      `"${(l.assignedToName || l.rep || "Unassigned").replace(/"/g, '""')}"`,
-      l.createdAt?.split("T")[0] || l.date || "",
+      sanitizeCsvCell(l.status || "new"),
+      sanitizeCsvCell(l.priority || "medium"),
+      sanitizeCsvCell(l.assignedToName || l.rep || "Unassigned"),
+      sanitizeCsvCell(l.createdAt?.split("T")[0] || l.date || ""),
     ]);
 
     const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
