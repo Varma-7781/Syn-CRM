@@ -8,23 +8,36 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 import type { Analytics } from 'firebase/analytics';
 import type { Messaging } from 'firebase/messaging';
 
-// Check if all required Firebase environment variables are present
-const isFirebaseConfigured = () => {
-  return !!(
-    import.meta.env.VITE_FIREBASE_API_KEY &&
-    import.meta.env.VITE_FIREBASE_PROJECT_ID
-  );
+// Official Production Firebase Configuration for SYNTRAXS CRM
+const SYNTRAXS_FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyDYBDR-7wEJx8s7LOME-Dm6iCtxhj_72a0',
+  authDomain: 'crm-syntraxs.firebaseapp.com',
+  databaseURL: '',
+  projectId: 'crm-syntraxs',
+  storageBucket: 'crm-syntraxs.firebasestorage.app',
+  messagingSenderId: '656349903092',
+  appId: '1:656349903092:web:b83f5582c2c80c8b0e06a1',
+  measurementId: 'G-9HQR7TSHJK',
 };
 
+// Protect against deprecated legacy environments (e.g. bristletech-crm-4a99d)
+const rawProjectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+const isLegacyEnvironment = rawProjectId === 'bristletech-crm-4a99d';
+
 export const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+  apiKey: (!isLegacyEnvironment && import.meta.env.VITE_FIREBASE_API_KEY) || SYNTRAXS_FIREBASE_CONFIG.apiKey,
+  authDomain: (!isLegacyEnvironment && import.meta.env.VITE_FIREBASE_AUTH_DOMAIN) || SYNTRAXS_FIREBASE_CONFIG.authDomain,
+  databaseURL: (!isLegacyEnvironment && import.meta.env.VITE_FIREBASE_DATABASE_URL) || SYNTRAXS_FIREBASE_CONFIG.databaseURL,
+  projectId: (!isLegacyEnvironment && rawProjectId) || SYNTRAXS_FIREBASE_CONFIG.projectId,
+  storageBucket: (!isLegacyEnvironment && import.meta.env.VITE_FIREBASE_STORAGE_BUCKET) || SYNTRAXS_FIREBASE_CONFIG.storageBucket,
+  messagingSenderId: (!isLegacyEnvironment && import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID) || SYNTRAXS_FIREBASE_CONFIG.messagingSenderId,
+  appId: (!isLegacyEnvironment && import.meta.env.VITE_FIREBASE_APP_ID) || SYNTRAXS_FIREBASE_CONFIG.appId,
+  measurementId: (!isLegacyEnvironment && import.meta.env.VITE_FIREBASE_MEASUREMENT_ID) || SYNTRAXS_FIREBASE_CONFIG.measurementId,
+};
+
+// Syntraxs Firebase is always reliably configured
+const isFirebaseConfigured = () => {
+  return !!(firebaseConfig.apiKey && firebaseConfig.projectId);
 };
 
 let app: FirebaseApp | null = null;

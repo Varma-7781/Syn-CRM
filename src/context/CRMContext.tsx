@@ -199,7 +199,25 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
 
       unsubUsers = userService.subscribeToUsers((fetchedUsers) => {
         if (!cancelled) {
-          setUsers(fetchedUsers || []);
+          const userList = fetchedUsers || [];
+          setUsers(userList);
+
+          // Auto-sync current user profile if stale or role was changed in Firestore
+          setCurrentUser((prevUser) => {
+            if (!prevUser) return prevUser;
+            const liveMatch = userList.find(
+              (u) =>
+                u.id === prevUser.id ||
+                (u.email && prevUser.email && u.email.toLowerCase() === prevUser.email.toLowerCase())
+            );
+            if (liveMatch && (liveMatch.role !== prevUser.role || liveMatch.name !== prevUser.name)) {
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('syntraxs_active_user', JSON.stringify(liveMatch));
+              }
+              return liveMatch;
+            }
+            return prevUser;
+          });
         }
       });
 
