@@ -118,7 +118,11 @@ export function AddSalesRepresentativeDialog({ open, onOpenChange }: AddSalesRep
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-3.5 pt-1">
+        <form onSubmit={handleSubmit} autoComplete="off" className="space-y-3.5 pt-1">
+          {/* Prevent browser password managers from auto-filling saved personal passwords */}
+          <input type="text" name="fake_usernamenotempty" style={{ display: "none" }} tabIndex={-1} aria-hidden="true" />
+          <input type="password" name="fake_passwordnotempty" style={{ display: "none" }} tabIndex={-1} aria-hidden="true" />
+
           {/* Full Name */}
           <div>
             <label className="mb-1 block text-[11.5px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -128,6 +132,8 @@ export function AddSalesRepresentativeDialog({ open, onOpenChange }: AddSalesRep
               <User className="absolute left-3 size-4 text-muted-foreground" />
               <input
                 type="text"
+                name="sales_rep_fullname"
+                autoComplete="off"
                 required
                 disabled={loading}
                 value={name}
@@ -147,6 +153,8 @@ export function AddSalesRepresentativeDialog({ open, onOpenChange }: AddSalesRep
               <Mail className="absolute left-3 size-4 text-muted-foreground" />
               <input
                 type="email"
+                name="sales_rep_work_email"
+                autoComplete="off"
                 required
                 disabled={loading}
                 value={email}
@@ -167,6 +175,8 @@ export function AddSalesRepresentativeDialog({ open, onOpenChange }: AddSalesRep
                 <Lock className="absolute left-3 size-4 text-muted-foreground" />
                 <input
                   type={showPassword ? "text" : "password"}
+                  name="sales_rep_initial_password"
+                  autoComplete="new-password"
                   required
                   disabled={loading}
                   value={password}
@@ -194,6 +204,8 @@ export function AddSalesRepresentativeDialog({ open, onOpenChange }: AddSalesRep
                 <Phone className="absolute left-3 size-4 text-muted-foreground" />
                 <input
                   type="tel"
+                  name="sales_rep_phone"
+                  autoComplete="off"
                   disabled={loading}
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
