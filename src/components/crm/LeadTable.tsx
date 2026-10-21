@@ -148,7 +148,45 @@ export function LeadTable({ leads, admin }: { leads: Lead[]; admin?: boolean }) 
                   <td className="num px-2 text-[12.5px] font-medium text-muted-foreground">{dStr}</td>
                   <td className="px-2"><StatusBadge status={l.status || "new"} /></td>
                   <td className="px-2"><PriorityMark p={l.priority || "medium"} /></td>
-                  {admin && <td className="px-2">{repName ? <span className="flex items-center gap-2 whitespace-nowrap text-[13px] font-medium text-foreground"><Avatar name={repName} />{repName.split(" ")[0]}</span> : <span className="text-[12px] italic text-muted-foreground">Unassigned</span>}</td>}
+                  {admin ? (
+                    <td className="px-2" onClick={(e) => e.stopPropagation()}>
+                      <select
+                        className={cn(
+                          "h-8 rounded-md border border-border bg-surface px-2 text-[12.5px] font-medium text-foreground hover:border-primary focus:border-primary focus:outline-none transition-colors cursor-pointer",
+                          !repName && "text-muted-foreground italic border-dashed"
+                        )}
+                        value={repName || ""}
+                        onChange={async (e) => {
+                          const newRep = e.target.value;
+                          const targetUser = users.find((u) => u.name === newRep);
+                          await updateLead(l.id, {
+                            rep: newRep || null,
+                            assignedToName: newRep || null,
+                            assignedTo: targetUser?.id || (newRep ? targetUser?.email || newRep : null),
+                          });
+                          toast.success(`Assigned ${comp} to ${newRep || "Unassigned"}`);
+                        }}
+                      >
+                        <option value="">Unassigned</option>
+                        {salesReps.map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  ) : (
+                    <td className="px-2">
+                      {repName ? (
+                        <span className="flex items-center gap-2 whitespace-nowrap text-[13px] font-medium text-foreground">
+                          <Avatar name={repName} />
+                          {repName.split(" ")[0]}
+                        </span>
+                      ) : (
+                        <span className="text-[12px] italic text-muted-foreground">Unassigned</span>
+                      )}
+                    </td>
+                  )}
                   <td className="px-2 text-center" onClick={(e) => e.stopPropagation()}>
                     {l.status === 'interested' ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 whitespace-nowrap" title={l.interestedByName ? `Marked by ${l.interestedByName}` : 'Interested'}>
@@ -198,13 +236,19 @@ export function LeadTable({ leads, admin }: { leads: Lead[]; admin?: boolean }) 
 }
 
 function LeadDrawer({ lead, onClose, onSave }: { lead: Lead | null; onClose: () => void; onSave?: () => void }) {
-  const { updateLead, markLeadAsInterested, addActivity, activities, currentUser } = useCRM();
+  const { updateLead, markLeadAsInterested, addActivity, activities, currentUser, users } = useCRM();
   const [status, setStatus] = useState<any>(lead?.status || "new");
   const [priority, setPriority] = useState<any>(lead?.priority || "medium");
   const [followUp, setFollowUp] = useState(lead?.nextFollowUp || "");
   const [val, setVal] = useState<number | string>(lead?.value || 0);
   const [notes, setNotes] = useState(lead?.notes || "");
+  const [assignedRep, setAssignedRep] = useState(lead?.rep || lead?.assignedToName || "");
   const [saving, setSaving] = useState(false);
+
+  const salesReps = useMemo(() => {
+    const list = users.filter((u) => u.role === "sales").map((u) => u.name);
+    return list.length > 0 ? list : REPS;
+  }, [users]);
 
   // Sync state when opened lead changes
   useEffect(() => {
@@ -214,6 +258,7 @@ function LeadDrawer({ lead, onClose, onSave }: { lead: Lead | null; onClose: () 
       setFollowUp(lead.nextFollowUp || "");
       setVal(lead.value || 0);
       setNotes(lead.notes || "");
+      setAssignedRep(lead.rep || lead.assignedToName || "");
     }
   }, [lead]);
 
@@ -241,12 +286,16 @@ function LeadDrawer({ lead, onClose, onSave }: { lead: Lead | null; onClose: () 
     if (!lead) return;
     setSaving(true);
     try {
+      const targetUser = users.find((u) => u.name === assignedRep);
       const updates: any = {
         status,
         priority,
         nextFollowUp: followUp || undefined,
         value: Number(val) || 0,
         notes,
+        rep: assignedRep || null,
+        assignedToName: assignedRep || null,
+        assignedTo: targetUser?.id || (assignedRep ? targetUser?.email || assignedRep : null),
       };
       if (status === "interested" && lead.status !== "interested") {
         updates.interestedAt = new Date().toISOString();
@@ -329,7 +378,7 @@ function LeadDrawer({ lead, onClose, onSave }: { lead: Lead | null; onClose: () 
                   ["Requirement", lead.requirement || "General Inquiry"],
                   ["Expected value", inr(Number(val) || 0)],
                   ["Category", lead.category || "General"],
-                  ["Assigned rep", lead.rep || lead.assignedToName || "Unassigned"],
+                  ["Assigned rep", assignedRep || lead.rep || lead.assignedToName || "Unassigned"],
                   ["Created", lead.date || lead.createdAt?.split("T")[0] || ""],
                 ].map(([k, v]) => (
                   <div key={k}><dt className="eyebrow">{k}</dt><dd className="mt-1 text-[13.5px] font-medium text-foreground">{v}</dd></div>
@@ -342,6 +391,25 @@ function LeadDrawer({ lead, onClose, onSave }: { lead: Lead | null; onClose: () 
               <div className="space-y-3 rounded-md border border-border bg-background p-3.5 sm:p-4">
                 <div className="eyebrow">Update lead</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {currentUser?.role === "admin" && (
+                    <div className="sm:col-span-2 space-y-1">
+                      <label className="block text-[11.5px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Assign Sales Representative
+                      </label>
+                      <select
+                        className={cn(selectCls, "w-full font-medium text-foreground")}
+                        value={assignedRep}
+                        onChange={(e) => setAssignedRep(e.target.value)}
+                      >
+                        <option value="">Unassigned</option>
+                        {salesReps.map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <select className={selectCls} value={status} onChange={(e) => setStatus(e.target.value as any)}>
                     {LEAD_STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s]?.label || s}</option>)}
                   </select>
