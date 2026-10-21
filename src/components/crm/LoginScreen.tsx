@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useRef, type FormEvent } from "react";
 import { ArrowRight, Eye, EyeOff, Lock, Mail, ShieldCheck, Loader2, Moon, Sun, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 import { BrandMark, Wordmark, useTheme } from "@/components/crm/primitives";
 import { cn } from "@/lib/utils";
 import { useCRM } from "@/context/CRMContext";
