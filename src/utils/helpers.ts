@@ -56,3 +56,61 @@ export const inr = (n: number) =>
     : n >= 100000
     ? `₹${(n / 100000).toFixed(1)}L`
     : `₹${n.toLocaleString('en-IN')}`;
+
+export interface TrajectoryPoint {
+  m: string;
+  revenue: number;
+  target: number;
+}
+
+/**
+ * Computes live 6-month revenue and target trajectory from actual leads and targets
+ */
+export const computeSixMonthTrajectory = (
+  leads: any[],
+  targets: any[]
+): TrajectoryPoint[] => {
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const now = new Date();
+  const currentMonthIdx = now.getMonth(); // 0-based
+  const currentYear = now.getFullYear();
+
+  // Generate last 6 months in chronological order
+  const last6Months: { name: string; year: number; month: number }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(currentYear, currentMonthIdx - i, 1);
+    last6Months.push({
+      name: monthNames[d.getMonth()],
+      year: d.getFullYear(),
+      month: d.getMonth(),
+    });
+  }
+
+  // Calculate total monthly target in Lakhs
+  const monthlyTargetSum = targets
+    .filter((t) => t.type === 'monthly')
+    .reduce((acc, t) => acc + (Number(t.target) || 0), 0);
+  const targetLakhs = monthlyTargetSum > 0
+    ? Math.round((monthlyTargetSum / 100000) * 10) / 10
+    : 0;
+
+  return last6Months.map(({ name, year, month }) => {
+    // Sum all won leads in this month
+    const wonInMonth = leads.filter((l) => {
+      if (l.status !== 'won') return false;
+      const rawDate = l.createdAt || l.date;
+      if (!rawDate) return false;
+      const d = new Date(rawDate);
+      return !isNaN(d.getTime()) && d.getFullYear() === year && d.getMonth() === month;
+    });
+
+    const totalWon = wonInMonth.reduce((acc, l) => acc + (Number(l.value) || 0), 0);
+    const revenueLakhs = Math.round((totalWon / 100000) * 10) / 10;
+
+    return {
+      m: name,
+      revenue: revenueLakhs,
+      target: targetLakhs,
+    };
+  });
+};

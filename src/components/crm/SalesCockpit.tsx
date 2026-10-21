@@ -34,7 +34,7 @@ export function SalesCockpit() {
   // Target quota for this user
   const userTarget = useMemo(() => {
     const t = targets.find((t) => (t.userId === currentUser?.id || t.userId === currentUser?.name) && t.type === "monthly");
-    return t ? t.target : 1500000;
+    return t ? t.target : 0;
   }, [targets, currentUser]);
 
   const quotaPercent = userTarget > 0 ? Math.min(100, Math.round((wonRev / userTarget) * 100)) : 0;
@@ -104,8 +104,8 @@ export function SalesCockpit() {
         <Kpi label="Total in pipeline" value={inr(pipelineRev)} />
         <Kpi
           label="Target quota"
-          value={`${quotaPercent}%`}
-          context={`${inr(wonRev)} of ${inr(userTarget)}`}
+          value={userTarget > 0 ? `${quotaPercent}%` : "—"}
+          context={userTarget > 0 ? `${inr(wonRev)} of ${inr(userTarget)}` : "No quota assigned"}
         >
           <Meter value={quotaPercent} tone={quotaPercent >= 100 ? "success" : "primary"} />
         </Kpi>

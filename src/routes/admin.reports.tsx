@@ -44,7 +44,7 @@ function Reports() {
     }));
   }, [leads]);
 
-  // Activity breakdown
+  // Activity breakdown strictly from live Firestore activities
   const acts = useMemo(() => {
     const counts: Record<string, number> = { Call: 0, Email: 0, WhatsApp: 0, Meeting: 0, Note: 0 };
     activities.forEach((a) => {
@@ -57,11 +57,11 @@ function Reports() {
     });
 
     return [
-      { t: "Call", n: counts.Call || 18 },
-      { t: "Email", n: counts.Email || 12 },
-      { t: "WhatsApp", n: counts.WhatsApp || 14 },
-      { t: "Meeting", n: counts.Meeting || 5 },
-      { t: "Note", n: counts.Note || 8 },
+      { t: "Call", n: counts.Call },
+      { t: "Email", n: counts.Email },
+      { t: "WhatsApp", n: counts.WhatsApp },
+      { t: "Meeting", n: counts.Meeting },
+      { t: "Note", n: counts.Note },
     ];
   }, [activities]);
 
@@ -71,18 +71,19 @@ function Reports() {
     return salesMembers.map((m) => {
       const repLeads = leads.filter((l) => l.assignedTo === m.id || l.assignedToName === m.name || l.rep === m.name);
       const won = repLeads.filter((l) => l.status === "won").length;
-      const repTarget = targets.find((t) => (t.userId === m.id || t.userId === m.name) && t.type === "monthly")?.target || 1500000;
+      const repTarget = targets.find((t) => (t.userId === m.id || t.userId === m.name) && t.type === "monthly")?.target || 0;
       const achieved = repLeads.filter((l) => l.status === "won").reduce((a, l) => a + (l.value || 0), 0);
+      const repCalls = activities.filter((a) => (a.userId === m.id || a.who === m.name || a.userName === m.name) && a.type === "call").length;
       return {
         name: m.name,
         target: repTarget,
         achieved,
         leads: repLeads.length,
         won,
-        calls: repLeads.length * 3,
+        calls: repCalls,
       };
     });
-  }, [salesMembers, leads, targets]);
+  }, [salesMembers, leads, targets, activities]);
 
   const handleExportReport = () => {
     const workbook = XLSX.utils.book_new();

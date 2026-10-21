@@ -20,14 +20,21 @@ const axis = {
   axisLine: false,
 } as const;
 
-export function RevenueArea({ height = 220 }: { height?: number }) {
+export function RevenueArea({
+  height = 220,
+  data,
+}: {
+  height?: number;
+  data?: { m: string; revenue: number; target: number }[];
+}) {
+  const chartData = data && data.length > 0 ? data : REVENUE_TREND;
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={REVENUE_TREND} margin={{ top: 8, right: 4, left: -18, bottom: 0 }}>
+      <AreaChart data={chartData} margin={{ top: 8, right: 4, left: -18, bottom: 0 }}>
         <defs><linearGradient id="rv" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="var(--primary)" stopOpacity={0.3} /><stop offset="1" stopColor="var(--primary)" stopOpacity={0} /></linearGradient></defs>
         <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="2 4" />
         <XAxis dataKey="m" {...axis} /><YAxis {...axis} tickFormatter={(v) => `${v}L`} />
-        <Tooltip {...tip} formatter={(v: number) => `₹${v}0L`} />
+        <Tooltip {...tip} formatter={(v: any) => (typeof v === "number" ? `₹${v.toFixed(1)}L` : String(v))} />
         <Area type="monotone" dataKey="revenue" stroke="var(--primary)" strokeWidth={2} fill="url(#rv)" />
         <Line type="monotone" dataKey="target" stroke="var(--muted-foreground)" strokeDasharray="4 4" strokeWidth={1.5} dot={false} />
       </AreaChart>

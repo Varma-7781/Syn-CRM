@@ -4,6 +4,7 @@ import { AppPage } from "@/components/crm/AppPage";
 import { Kpi, KpiStrip, Meter, Section } from "@/components/crm/primitives";
 import { Bars, CHART_COLORS, Donut, RevenueArea } from "@/components/crm/charts";
 import { inr } from "@/lib/crm-data";
+import { computeSixMonthTrajectory } from "@/utils/helpers";
 import { useCRM } from "@/context/CRMContext";
 
 export const Route = createFileRoute("/admin/revenue")({
@@ -19,20 +20,26 @@ export const Route = createFileRoute("/admin/revenue")({
 });
 
 function Revenue() {
-  const { leads, users } = useCRM();
+  const { leads, users, targets } = useCRM();
 
   const wonLeads = useMemo(() => leads.filter((l) => l.status === "won"), [leads]);
   const revenueYTD = useMemo(() => wonLeads.reduce((a, l) => a + (l.value || 0), 0), [wonLeads]);
-  const avgDealSize = wonLeads.length > 0 ? Math.round(revenueYTD / wonLeads.length) : 510000;
+  const avgDealSize = wonLeads.length > 0 ? Math.round(revenueYTD / wonLeads.length) : 0;
   const pendingPaymentLeads = useMemo(() => leads.filter((l) => l.status === "pending_payment"), [leads]);
   const pendingPayment = useMemo(
     () => pendingPaymentLeads.reduce((a, l) => a + (l.value || 0), 0),
     [pendingPaymentLeads]
   );
-  const pipelineValue = useMemo(
-    () => leads.filter((l) => l.status !== "lost" && l.status !== "won").reduce((a, l) => a + (l.value || 0), 0),
+  const pipelineLeads = useMemo(
+    () => leads.filter((l) => l.status !== "lost" && l.status !== "won"),
     [leads]
   );
+  const pipelineValue = useMemo(
+    () => pipelineLeads.reduce((a, l) => a + (l.value || 0), 0),
+    [pipelineLeads]
+  );
+
+  const trajectory = useMemo(() => computeSixMonthTrajectory(leads, targets), [leads, targets]);
 
   // Dynamic acquisition origin breakdown
   const originData = useMemo(() => {
@@ -45,13 +52,7 @@ function Revenue() {
     const total = leads.length || 1;
     const entries = Object.entries(counts);
     if (entries.length === 0) {
-      return [
-        { name: "Referral", value: 38 },
-        { name: "Inbound", value: 26 },
-        { name: "Outbound", value: 18 },
-        { name: "Events", value: 11 },
-        { name: "Partners", value: 7 },
-      ];
+      return [{ name: "No Data", value: 100 }];
     }
 
     return entries
@@ -75,27 +76,58 @@ function Revenue() {
         .reduce((a, l) => a + (l.value || 0), 0);
       return {
         n: u.name.split(" ")[0],
-        lakh: Math.round(repWon / 100000),
+        lakh: Math.round((repWon / 100000) * 10) / 10,
       };
     });
   }, [leads, users]);
 
+  const quotationLeads = useMemo(() => leads.filter((l) => l.status === "quotation_sent"), [leads]);
   const quotationVal = useMemo(() => {
-    return leads.filter((l) => l.status === "quotation_sent").reduce((a, l) => a + (l.value || 0), 0) || 5420000;
-  }, [leads]);
+    return quotationLeads.reduce((a, l) => a + (l.value || 0), 0);
+  }, [quotationLeads]);
+
+  // Dynamic operational metrics
+  const collectionEfficiency =
+    revenueYTD + pendingPayment > 0
+      ? Math.round((revenueYTD / (revenueYTD + pendingPayment)) * 100)
+      : 100;
+
+  const quotationToWon =
+    wonLeads.length + quotationLeads.length > 0
+      ? Math.round((wonLeads.length / (wonLeads.length + quotationLeads.length)) * 100)
+      : (wonLeads.length > 0 ? 100 : 0);
+
+  const completedFollowUps = leads.filter((l) => l.followUpStatus === "completed").length;
+  const totalFollowUps = leads.filter((l) => !!l.nextFollowUp || !!l.followUpStatus).length;
+  const followUpsOnTime =
+    totalFollowUps > 0
+      ? Math.round((completedFollowUps / totalFollowUps) * 100)
+      : 100;
+
+  const activePipelineRatio =
+    leads.length > 0
+      ? Math.round((pipelineLeads.length / leads.length) * 100)
+      : 0;
+
+  const operationalGauges = [
+    ["Collection efficiency", collectionEfficiency],
+    ["Quotation → won", quotationToWon],
+    ["Follow-ups on time", followUpsOnTime],
+    ["Active pipeline ratio", activePipelineRatio],
+  ] as const;
 
   return (
     <AppPage title="Revenue Analytics" sub="Where revenue comes from, and how fast it's growing">
       <KpiStrip>
-        <Kpi label="Revenue YTD" value={inr(revenueYTD || 19200000)} delta={22.4} />
+        <Kpi label="Revenue YTD" value={inr(revenueYTD)} delta={22.4} />
         <Kpi label="Avg. deal size" value={inr(avgDealSize)} delta={6.0} />
-        <Kpi label="Pending payment" value={inr(pendingPayment || 2840000)} context={`${pendingPaymentLeads.length || 7} invoices`} />
-        <Kpi label="Pipeline value" value={inr(pipelineValue || 11400000)} delta={-3.1} />
+        <Kpi label="Pending payment" value={inr(pendingPayment)} context={`${pendingPaymentLeads.length} invoices`} />
+        <Kpi label="Pipeline value" value={inr(pipelineValue)} delta={-3.1} />
       </KpiStrip>
 
       <div className="grid gap-5 xl:grid-cols-[1.6fr_1fr]">
         <Section title="Six-month trajectory" sub="Is growth keeping pace with target?">
-          <RevenueArea height={260} />
+          <RevenueArea height={260} data={trajectory} />
         </Section>
         <Section title="Acquisition origin" sub="Which channels win deals?">
           <Donut data={originData} />
@@ -117,12 +149,7 @@ function Revenue() {
         </Section>
         <Section title="Operational gauges">
           <div className="space-y-5">
-            {[
-              ["Collection efficiency", 86],
-              ["Quotation → won", 42],
-              ["Follow-ups on time", 74],
-              ["Lead response < 1h", 61],
-            ].map(([k, v]) => (
+            {operationalGauges.map(([k, v]) => (
               <div key={k as string}>
                 <div className="mb-1.5 flex justify-between text-[13px]">
                   <span className="font-medium text-foreground">{k}</span>

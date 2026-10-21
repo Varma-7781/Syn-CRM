@@ -46,7 +46,7 @@ function Team() {
   const totalWon = repList.reduce((a, r) => a + (r.won || 0), 0);
   const totalCalls = repList.reduce((a, r) => a + (r.calls || 0), 0);
   const totalLeads = repList.reduce((a, r) => a + (r.leads || 0), 0);
-  const avgWinRate = totalLeads > 0 ? ((totalWon / totalLeads) * 100).toFixed(1) : "25.4";
+  const avgWinRate = totalLeads > 0 ? ((totalWon / totalLeads) * 100).toFixed(1) : "0.0";
 
   return (
     <AppPage

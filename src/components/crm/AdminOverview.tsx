@@ -1,9 +1,11 @@
 import { Link } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { Mail, MessageCircle, PhoneCall, Trophy, CalendarClock, StickyNote, ArrowRight } from "lucide-react";
 import { AppPage } from "@/components/crm/AppPage";
 import { Avatar, Kpi, KpiStrip, Meter, Section } from "@/components/crm/primitives";
 import { RevenueArea } from "@/components/crm/charts";
-import { ACTIVITY, TEAM, inr, STATUS_META } from "@/lib/crm-data";
+import { inr, STATUS_META } from "@/lib/crm-data";
+import { computeSixMonthTrajectory } from "@/utils/helpers";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCRM } from "@/context/CRMContext";
@@ -23,10 +25,12 @@ export function AdminOverview() {
   const wonLeads = leads.filter((l) => l.status === "won");
   const won = wonLeads.reduce((a, l) => a + (l.value || 0), 0);
   const monthlyTargets = targets.filter((t) => t.type === "monthly");
-  const target = monthlyTargets.reduce((a, t) => a + (t.target || 0), 0) || 4500000;
+  const target = monthlyTargets.reduce((a, t) => a + (t.target || 0), 0);
   const realization = target > 0 ? Math.min(100, Math.round((won / target) * 100)) : 0;
   const salesUsers = users.filter((u) => u.role === "sales");
-  const repCount = salesUsers.length > 0 ? salesUsers.length : 5;
+  const repCount = salesUsers.length;
+
+  const trajectory = useMemo(() => computeSixMonthTrajectory(leads, targets), [leads, targets]);
 
   const funnelStages = ["new", "interested", "follow_up", "quotation_sent", "won"] as const;
   const funnel = funnelStages.map((s) => ({
@@ -89,7 +93,7 @@ export function AdminOverview() {
             <div><div className="eyebrow">Target</div><div className="num mt-1 text-[19px] font-bold text-foreground">{inr(target)}</div></div>
             <div><div className="eyebrow">Gap</div><div className="num mt-1 text-[19px] font-bold text-warning">{inr(Math.max(0, target - won))}</div></div>
           </div>
-          <RevenueArea />
+          <RevenueArea data={trajectory} />
         </Section>
         <Section title="Pipeline funnel" sub="Leads by stage">
           <div className="space-y-3">

@@ -236,7 +236,7 @@ export function LeadTable({ leads, admin }: { leads: Lead[]; admin?: boolean }) 
 }
 
 function LeadDrawer({ lead, onClose, onSave }: { lead: Lead | null; onClose: () => void; onSave?: () => void }) {
-  const { updateLead, markLeadAsInterested, addActivity, activities, currentUser, users } = useCRM();
+  const { updateLead, deleteLead, markLeadAsInterested, addActivity, activities, currentUser, users } = useCRM();
   const [status, setStatus] = useState<any>(lead?.status || "new");
   const [priority, setPriority] = useState<any>(lead?.priority || "medium");
   const [followUp, setFollowUp] = useState(lead?.nextFollowUp || "");
@@ -438,9 +438,26 @@ function LeadDrawer({ lead, onClose, onSave }: { lead: Lead | null; onClose: () 
                   rows={3}
                   className="w-full resize-none rounded-md border border-border bg-surface p-2 text-[13px] text-foreground outline-none focus:border-primary placeholder:text-muted-foreground"
                 />
-                <Button className="w-full" onClick={handleSaveChanges} disabled={saving}>
-                  {saving ? "Saving…" : "Save changes"}
-                </Button>
+                <div className="flex gap-2">
+                  <Button className="flex-1" onClick={handleSaveChanges} disabled={saving}>
+                    {saving ? "Saving…" : "Save changes"}
+                  </Button>
+                  {currentUser?.role === "admin" && (
+                    <Button
+                      variant="outline"
+                      type="button"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
+                      onClick={async () => {
+                        if (window.confirm(`Are you sure you want to permanently delete lead for "${lead.companyName || lead.company}"?`)) {
+                          await deleteLead(lead.id);
+                          onClose();
+                        }
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  )}
+                </div>
               </div>
               <div>
                 <div className="eyebrow mb-3">Activity Timeline</div>
