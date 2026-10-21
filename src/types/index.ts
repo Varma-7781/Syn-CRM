@@ -85,4 +85,14 @@ export interface User {
   phone?: string;
   password?: string;
   department?: string;
+  createdAt?: any;
+}
+
+export interface CreateSalesRepresentativeInput {
+  name: string;
+  email: string;
+  password: string;
+  phone?: string;
+  department?: string;
+  targetQuota?: number;
 }

@@ -1,8 +1,10 @@
 /**
  * User Service
- * Handles user CRUD operations with Firestore
+ * Handles user CRUD operations with Firestore and Firebase Authentication
  */
 
+import { initializeApp, deleteApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, signOut, deleteUser as deleteAuthUser } from 'firebase/auth';
 import {
   collection,
   doc,
@@ -16,8 +18,8 @@ import {
   Timestamp,
   setDoc,
 } from 'firebase/firestore';
-import { db, isFirebaseEnabled } from '../config/firebase';
-import { User } from '../types';
+import { firebaseConfig, auth, db, isFirebaseEnabled } from '../config/firebase';
+import { User, CreateSalesRepresentativeInput } from '../types';
 
 const COLLECTION_NAME = 'users';
 
@@ -88,6 +90,167 @@ export const updateUser = async (userId: string, updates: Partial<User>): Promis
   } catch (error: any) {
     console.error('❌ [USERS] Failed to update user:', error.message);
     return false;
+  }
+};
+
+/**
+ * Create a new Sales Representative in Firebase Authentication and Firestore.
+ * Uses an isolated secondary Firebase App instance so the current Administrator
+ * remains 100% signed in without their session or token being touched.
+ */
+export const createSalesUser = async (
+  input: CreateSalesRepresentativeInput
+): Promise<{ success: boolean; user?: User; error?: string }> => {
+  if (!guardFirebase()) {
+    return { success: false, error: 'Firebase is not initialized or offline.' };
+  }
+
+  // 1. Validate inputs
+  const cleanName = (input.name || '').trim();
+  const cleanEmail = (input.email || '').trim().toLowerCase();
+  const password = input.password || '';
+
+  if (!cleanName || cleanName.length < 2) {
+    return { success: false, error: 'Full name is required (at least 2 characters).' };
+  }
+  if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+    return { success: false, error: 'Please enter a valid work email address.' };
+  }
+  if (!password || password.length < 6) {
+    return { success: false, error: 'Password must be at least 6 characters long.' };
+  }
+
+  // 2. Check for duplicate email in Firestore users
+  try {
+    const existingSnap = await getDocs(collection(db!, COLLECTION_NAME));
+    const duplicate = existingSnap.docs.some(
+      (d) => d.data().email && d.data().email.toLowerCase() === cleanEmail
+    );
+    if (duplicate) {
+      return { success: false, error: 'A user with this email already exists in the CRM.' };
+    }
+  } catch (err: any) {
+    console.warn('Could not check existing users:', err.message);
+  }
+
+  // 3. Optional server endpoint invocation if configured
+  const cloudFunctionUrl = import.meta.env.VITE_CREATE_SALES_FUNCTION_URL;
+  if (cloudFunctionUrl && auth?.currentUser) {
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const res = await fetch(cloudFunctionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          name: cleanName,
+          email: cleanEmail,
+          password,
+          phone: input.phone || '',
+          department: input.department || 'Sales',
+          targetQuota: input.targetQuota || 1500000,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error || 'Server error creating user' };
+      }
+      return { success: true, user: data.user };
+    } catch (fnErr: any) {
+      console.warn('Cloud Function unavailable, using direct isolated secondary auth provisioning:', fnErr.message);
+    }
+  }
+
+  // 4. Isolated Secondary Firebase App Provisioning
+  // Guarantees Admin stays completely signed in on the default app
+  const secondaryAppName = `provision-sales-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  let secondaryApp: any = null;
+  let createdAuthUser: any = null;
+  let authUid = '';
+
+  try {
+    secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
+    const secondaryAuth = getAuth(secondaryApp);
+
+    const userCred = await createUserWithEmailAndPassword(secondaryAuth, cleanEmail, password);
+    createdAuthUser = userCred.user;
+    authUid = createdAuthUser.uid;
+
+    await signOut(secondaryAuth).catch(() => {});
+    await deleteApp(secondaryApp).catch(() => {});
+    secondaryApp = null;
+  } catch (authErr: any) {
+    if (secondaryApp) {
+      await deleteApp(secondaryApp).catch(() => {});
+    }
+    if (authErr.code === 'auth/email-already-in-use') {
+      return { success: false, error: 'This email is already registered in Firebase Authentication.' };
+    }
+    if (authErr.code === 'auth/weak-password') {
+      return { success: false, error: 'Password should be at least 6 characters long.' };
+    }
+    if (authErr.code === 'auth/invalid-email') {
+      return { success: false, error: 'Invalid email address format.' };
+    }
+    return {
+      success: false,
+      error: authErr.message || 'Failed to create user in Firebase Authentication.',
+    };
+  }
+
+  // 5. Create Firestore user profile under the exact matching Auth UID
+  try {
+    const userProfile: User = {
+      id: authUid,
+      name: cleanName,
+      email: cleanEmail,
+      role: 'sales', // Enforce sales role strictly
+      department: input.department?.trim() || 'Sales',
+      phone: input.phone?.trim() || '',
+      createdAt: Timestamp.now(),
+    };
+
+    await setDoc(doc(db!, COLLECTION_NAME, authUid), {
+      ...userProfile,
+      createdBy: auth?.currentUser?.uid || 'admin',
+    });
+
+    // 6. Create monthly target quota for the new rep in Firestore
+    const currentPeriod = new Date().toISOString().slice(0, 7);
+    const targetQuota = Number(input.targetQuota) || 1500000;
+    await setDoc(doc(db!, 'targets', `target_${authUid}_${currentPeriod}`), {
+      userId: authUid,
+      userName: cleanName,
+      type: 'monthly',
+      period: currentPeriod,
+      target: targetQuota,
+      achieved: 0,
+      createdAt: Timestamp.now(),
+    });
+
+    return { success: true, user: userProfile };
+  } catch (firestoreErr: any) {
+    console.error('❌ [USERS] Firestore profile creation failed:', firestoreErr);
+
+    // Rollback: Attempt cleanup of newly created Auth user to avoid orphan account
+    if (createdAuthUser) {
+      try {
+        const cleanupApp = initializeApp(firebaseConfig, `cleanup-${Date.now()}`);
+        const cleanupAuth = getAuth(cleanupApp);
+        const reSign = await createUserWithEmailAndPassword(cleanupAuth, cleanEmail, password);
+        await deleteAuthUser(reSign.user);
+        await deleteApp(cleanupApp);
+      } catch (cleanErr: any) {
+        console.warn('Could not roll back auth account:', cleanErr.message);
+      }
+    }
+
+    return {
+      success: false,
+      error: 'Firebase Auth account was created, but failed to save profile to Firestore.',
+    };
   }
 };
 

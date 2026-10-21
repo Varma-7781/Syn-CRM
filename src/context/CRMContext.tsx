@@ -45,6 +45,9 @@ interface CRMContextType {
   updateTarget: (targetId: string, updates: Partial<Target>) => Promise<boolean>;
   addActivity: (activity: Omit<Activity, 'id' | 'timestamp'> & { timestamp?: string }) => Promise<string | null>;
   addUser: (user: Omit<User, 'id'>) => Promise<string | null>;
+  createSalesRepresentative: (
+    data: import('../types').CreateSalesRepresentativeInput
+  ) => Promise<{ success: boolean; user?: User; error?: string }>;
   playNotificationSound: () => void;
 }
 
@@ -503,6 +506,14 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     [leads, currentUser]
   );
 
+  const createSalesRepresentative = useCallback(
+    async (data: import('../types').CreateSalesRepresentativeInput) => {
+      const res = await userService.createSalesUser(data);
+      return res;
+    },
+    []
+  );
+
   const value = useMemo(
     () => ({
       currentUser,
@@ -524,6 +535,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       updateTarget,
       addActivity,
       addUser,
+      createSalesRepresentative,
       playNotificationSound: () => playNotificationSound(0.5),
     }),
     [
@@ -546,6 +558,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       updateTarget,
       addActivity,
       addUser,
+      createSalesRepresentative,
     ]
   );
 

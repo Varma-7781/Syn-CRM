@@ -1,10 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { UserPlus } from "lucide-react";
 import { AppPage } from "@/components/crm/AppPage";
 import { Avatar, Kpi, KpiStrip, Meter, Section } from "@/components/crm/primitives";
 import { ActivityList } from "@/components/crm/AdminOverview";
 import { Bars } from "@/components/crm/charts";
 import { inr } from "@/lib/crm-data";
 import { useCRM } from "@/context/CRMContext";
+import { Button } from "@/components/ui/button";
+import { AddSalesRepresentativeDialog } from "@/components/crm/AddSalesRepresentativeDialog";
 
 export const Route = createFileRoute("/admin/team")({
   head: () => ({ meta: [
@@ -18,6 +22,7 @@ export const Route = createFileRoute("/admin/team")({
 
 function Team() {
   const { users, leads, targets, activities } = useCRM();
+  const [isAddOpen, setIsAddOpen] = useState(false);
   const salesUsers = users.filter((u) => u.role === "sales");
 
   const repList = salesUsers.map((u) => {
@@ -47,7 +52,23 @@ function Team() {
     <AppPage
       title="Team Performance"
       sub="Live sales quota realization & rep metrics"
-      actions={<input type="month" defaultValue="2026-10" className="h-8 rounded-md border border-border bg-surface px-2 text-[12.5px] text-foreground" />}
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="month"
+            defaultValue="2026-10"
+            className="h-8 rounded-md border border-border bg-surface px-2 text-[12.5px] text-foreground"
+          />
+          <Button
+            size="sm"
+            onClick={() => setIsAddOpen(true)}
+            className="flex items-center gap-1.5 shadow-sm"
+          >
+            <UserPlus className="size-4" />
+            <span>Add Sales Representative</span>
+          </Button>
+        </div>
+      }
     >
       <KpiStrip>
         <Kpi label="Team revenue" value={inr(totalRevenue)} delta={9.2} />
@@ -107,6 +128,7 @@ function Team() {
       <Section title="Recent activity ledger" bodyClass="p-0">
         <ActivityList items={activities.length > 0 ? activities : undefined} />
       </Section>
+      <AddSalesRepresentativeDialog open={isAddOpen} onOpenChange={setIsAddOpen} />
     </AppPage>
   );
 }
