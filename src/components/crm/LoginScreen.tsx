@@ -111,10 +111,10 @@ function LoginForm() {
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <span className="text-[11px] font-medium text-muted-foreground mr-0.5">Quick:</span>
             {[
-              { label: "Sales (Masthan)", role: "sales" as const, email: "mastanvali@bristletech.com" },
-              { label: "Sales (Rajesh)", role: "sales" as const, email: "rajesh@bristletech.com" },
-              { label: "Admin (Zoopiter)", role: "admin" as const, email: "admin@zoopiter.com" },
-              { label: "Admin (Krishna)", role: "admin" as const, email: "krishnaprasad@bristletech.com" },
+              { label: "Admin (Syntraxs)", role: "admin" as const, email: "admin@syntraxs.com" },
+              { label: "Sales (Syntraxs)", role: "sales" as const, email: "sales@syntraxs.com" },
+              { label: "Admin (Krishna)", role: "admin" as const, email: "krishna@syntraxs.com" },
+              { label: "Sales (Masthan)", role: "sales" as const, email: "masthan@syntraxs.com" },
             ].map((q) => (
               <button
                 key={q.email}
