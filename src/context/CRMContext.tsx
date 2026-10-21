@@ -385,11 +385,15 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
   // Context Actions
   const login = useCallback(async (email: string, password?: string, preferredRole?: 'admin' | 'sales') => {
     setLoading(true);
-    const user = await authService.loginUser(email, password, preferredRole);
-    if (user) {
-      setCurrentUser(user);
+    try {
+      const user = await authService.loginUser(email, password, preferredRole);
+      if (user) {
+        setCurrentUser(user);
+      }
+      return user;
+    } finally {
+      setLoading(false);
     }
-    return user;
   }, []);
 
   const logout = useCallback(async () => {

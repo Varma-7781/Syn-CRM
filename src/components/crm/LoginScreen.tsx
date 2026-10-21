@@ -96,7 +96,9 @@ function LoginForm() {
         replace: true,
       });
     } catch (err: any) {
-      setError(err?.message || "Failed to sign in. Please try again.");
+      const msg = err?.message || "Failed to sign in. Please try again.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

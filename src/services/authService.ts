@@ -66,73 +66,84 @@ export const findUserByEmail = async (email: string): Promise<User | null> => {
 };
 
 /**
- * Login user - Accepts credentials and synchronizes with Firestore / local session
+ * Login user - Strictly authenticates credentials against Firebase Authentication
+ * and verifies authorization against Firestore user records.
  */
 export const loginUser = async (
   email: string,
-  _password?: string,
-  preferredRole?: 'admin' | 'sales'
-): Promise<User | null> => {
+  password?: string,
+  _preferredRole?: 'admin' | 'sales'
+): Promise<User> => {
   const cleanEmail = (email || '').trim().toLowerCase();
+  const cleanPassword = (password || '').trim();
+
   if (!cleanEmail) {
-    throw new Error('Please enter an email address.');
+    throw new Error('Please enter your work email address.');
   }
 
-  // Attempt direct Firebase Auth sign-in with provided credentials, falling back to background service user
-  if (_password && isFirebaseEnabled() && auth) {
-    try {
-      await signInWithEmailAndPassword(auth, cleanEmail, _password);
-    } catch {
-      await ensureFirebaseAuth();
+  if (!cleanPassword) {
+    throw new Error('Please enter your password.');
+  }
+
+  if (cleanPassword.length < 6) {
+    throw new Error('Password must be at least 6 characters long.');
+  }
+
+  if (!isFirebaseEnabled() || !auth || !db) {
+    throw new Error('Firebase Authentication is currently unavailable. Please try again.');
+  }
+
+  let authUser: FirebaseUser;
+  try {
+    const cred = await signInWithEmailAndPassword(auth, cleanEmail, cleanPassword);
+    authUser = cred.user;
+  } catch (err: any) {
+    console.warn('❌ [AUTH] Sign in failed for:', cleanEmail, err?.code, err?.message);
+    const code = err?.code || '';
+    if (
+      code === 'auth/invalid-credential' ||
+      code === 'auth/user-not-found' ||
+      code === 'auth/wrong-password' ||
+      code === 'auth/invalid-login-credentials'
+    ) {
+      throw new Error('Invalid email or password. Please verify your credentials and try again.');
     }
-  } else {
-    await ensureFirebaseAuth();
+    if (code === 'auth/user-disabled') {
+      throw new Error('This account has been deactivated. Please contact your CRM administrator.');
+    }
+    if (code === 'auth/too-many-requests') {
+      throw new Error('Too many failed login attempts. Please wait a few moments before trying again.');
+    }
+    if (code === 'auth/network-request-failed') {
+      throw new Error('Network connection failed. Please check your internet and try again.');
+    }
+    throw new Error(err?.message || 'Authentication failed. Please verify your credentials.');
   }
 
-  // Look for existing user in Firestore
-  let user = await findUserByEmail(cleanEmail);
+  // Look for registered CRM user profile in Firestore:
+  // 1. Primary check by exact Firebase Auth UID
+  let user: User | null = null;
+  try {
+    const userDocRef = doc(db, 'users', authUser.uid);
+    const userDocSnap = await getDoc(userDocRef);
+    if (userDocSnap.exists()) {
+      user = { id: userDocSnap.id, ...userDocSnap.data() } as User;
+    }
+  } catch (fetchErr: any) {
+    console.warn('Could not fetch user profile by UID:', fetchErr?.message);
+  }
 
+  // 2. Fallback check by email in case of mapped Firestore profile
   if (!user) {
-    // Determine role: use preferred role, or check email keywords
-    const defaultRole: 'admin' | 'sales' = preferredRole
-      ? preferredRole
-      : (cleanEmail.includes('admin') || cleanEmail.includes('cso') || cleanEmail.includes('manager')
-        ? 'admin'
-        : 'sales');
-
-    const rawName = cleanEmail.split('@')[0];
-    const formattedName = rawName
-      .replace(/[._]/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-
-    const uid = 'usr_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
-
-    user = {
-      id: uid,
-      name: formattedName || 'User',
-      email: cleanEmail,
-      role: defaultRole,
-      phone: '',
-      department: defaultRole === 'admin' ? 'Management' : 'Sales',
-    };
-
-    if (isFirebaseEnabled() && db) {
-      try {
-        await setDoc(doc(db, 'users', uid), {
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          phone: user.phone || '',
-          department: user.department || '',
-          createdAt: Timestamp.now(),
-        });
-      } catch (err) {
-        console.warn('Could not save user to Firestore:', err);
-      }
-    }
+    user = await findUserByEmail(cleanEmail);
   }
 
-  // Save active user to localStorage for session persistence
+  // Enforce CRM authorization: Authenticated Firebase users MUST have a registered Firestore profile
+  if (!user) {
+    throw new Error('Your account is authenticated, but no active CRM user profile was found. Please contact your administrator.');
+  }
+
+  // Save verified active user to localStorage for session persistence
   if (typeof window !== 'undefined') {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
   }
