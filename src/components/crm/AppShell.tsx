@@ -85,8 +85,8 @@ export function AppShell({ role, children }: { role: "admin" | "sales"; children
   const user = currentUser
     ? { name: currentUser.name, role: currentUser.role === "admin" ? "Administrator" : "Sales Representative" }
     : role === "admin"
-    ? { name: "Aditi Rao", role: "Administrator" }
-    : { name: "Priya Nair", role: "Sales Representative" };
+    ? { name: "Syntraxs Admin", role: "Administrator" }
+    : { name: "Rajesh Sharma", role: "Sales Representative" };
 
   const sidebar = (
     <div className="flex h-full flex-col">

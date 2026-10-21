@@ -78,8 +78,16 @@ export const loginUser = async (
     throw new Error('Please enter an email address.');
   }
 
-  // Ensure background Firebase connection is active so Firestore works
-  await ensureFirebaseAuth();
+  // Attempt direct Firebase Auth sign-in with provided credentials, falling back to background service user
+  if (_password && isFirebaseEnabled() && auth) {
+    try {
+      await signInWithEmailAndPassword(auth, cleanEmail, _password);
+    } catch {
+      await ensureFirebaseAuth();
+    }
+  } else {
+    await ensureFirebaseAuth();
+  }
 
   // Look for existing user in Firestore
   let user = await findUserByEmail(cleanEmail);

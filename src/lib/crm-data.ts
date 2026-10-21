@@ -29,7 +29,7 @@ export const STATUS_META: Record<LeadStatus, { label: string; tone: string }> = 
 import type { Lead } from '../types';
 export type { Lead };
 
-export const REPS = ["Arjun Mehta", "Priya Nair", "Rahul Verma", "Sneha Iyer", "Karan Shah"];
+export const REPS = ["Rajesh Sharma", "Sales Executive"];
 const companies = ["Tata Elxsi", "Infosys BPM", "Zoho Corp", "Freshworks", "Mahindra Logistics", "Razorpay", "Ather Energy", "Nykaa", "Dunzo", "Swiggy Instamart", "Ola Electric", "Groww", "Cred", "Lenskart", "Urban Company", "Meesho", "PhonePe", "Zerodha", "BigBasket", "Delhivery", "Byju's", "upGrad"];
 const reqs = ["ERP integration", "Cloud migration", "Custom CRM rollout", "Mobile app build", "Data warehouse", "Security audit", "AI chatbot", "Payment gateway", "HRMS suite"];
 const names = ["Vikram Rao", "Ananya Gupta", "Rohan Das", "Meera Pillai", "Aditya Kulkarni", "Kavya Reddy", "Nikhil Jain", "Isha Malhotra"];
