@@ -187,8 +187,14 @@ function AdminLeadsPage() {
                 leadData.createdAt = isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
               }
             } else if (header.includes("value")) leadData.value = Number(val) || 0;
-            else if (header.includes("status")) leadData.status = strValue || "new";
-            else if (header.includes("priority")) leadData.priority = strValue || "medium";
+            else if (header.includes("status")) {
+              const sClean = strValue.toLowerCase().trim().replace(/[\s-]/g, "_");
+              leadData.status = sClean || "new";
+            }
+            else if (header.includes("priority")) {
+              const pClean = strValue.toLowerCase().trim();
+              leadData.priority = (pClean === "high" || pClean === "low") ? pClean : "medium";
+            }
             else if (header.includes("note")) leadData.notes = strValue;
           });
 

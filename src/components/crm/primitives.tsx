@@ -125,30 +125,38 @@ const toneClass: Record<string, string> = {
   subtle: "text-muted-foreground bg-muted ring-border",
 };
 
-export function StatusBadge({ status }: { status: LeadStatus }) {
-  const m = STATUS_META[status];
+export function StatusBadge({ status }: { status?: string | null }) {
+  const clean = (status || "new").toLowerCase().trim().replace(/[\s-]/g, "_");
+  const metaLookup = STATUS_META as Record<string, { label: string; tone: string }>;
+  const m = metaLookup[clean] || metaLookup[status || ""] || {
+    label: status ? String(status).charAt(0).toUpperCase() + String(status).slice(1).replace(/_/g, " ") : "New",
+    tone: "info",
+  };
+  const tone = toneClass[m.tone] || toneClass.info;
+
   return (
-    <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap rounded px-2 py-0.5 text-[12px] font-medium ring-1 ring-inset", toneClass[m.tone])}>
+    <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap rounded px-2 py-0.5 text-[12px] font-medium ring-1 ring-inset", tone)}>
       <span className="size-1.5 rounded-full bg-current" />
       {m.label}
     </span>
   );
 }
 
-export function PriorityMark({ p }: { p: Priority }) {
-  const bars = p === "high" ? 3 : p === "medium" ? 2 : 1;
+export function PriorityMark({ p }: { p?: string | null }) {
+  const clean = (p || "medium").toLowerCase().trim();
+  const bars = clean === "high" ? 3 : clean === "medium" ? 2 : 1;
   return (
     <span className="inline-flex items-center gap-1.5 text-[12.5px] capitalize font-medium text-foreground">
       <span className="flex items-end gap-[2px]">
         {[1, 2, 3].map((b) => (
           <span
             key={b}
-            className={cn("w-[3px] rounded-sm", b <= bars ? (p === "high" ? "bg-destructive" : "bg-primary") : "bg-border-strong")}
+            className={cn("w-[3px] rounded-sm", b <= bars ? (clean === "high" ? "bg-destructive" : "bg-primary") : "bg-border-strong")}
             style={{ height: 4 + b * 3 }}
           />
         ))}
       </span>
-      {p}
+      {clean}
     </span>
   );
 }

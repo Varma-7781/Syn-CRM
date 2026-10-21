@@ -1,22 +1,29 @@
 // Sample workspace data so every screen renders. Replace with your live data source.
 export const LEAD_STATUSES = [
-  "new", "quotation_sent", "interested", "not_able_to_contact", "not_interested",
-  "won", "pending_payment", "follow_up", "lost", "dnp",
+  "new", "contacted", "interested", "follow_up", "quotation_sent", "proposal", "negotiation",
+  "pending_payment", "won", "closed", "converted", "not_able_to_contact", "not_interested",
+  "lost", "dnp", "rejected",
 ] as const;
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
 export type Priority = "low" | "medium" | "high";
 
 export const STATUS_META: Record<LeadStatus, { label: string; tone: string }> = {
   new: { label: "New", tone: "info" },
-  quotation_sent: { label: "Quotation sent", tone: "violet" },
+  contacted: { label: "Contacted", tone: "info" },
   interested: { label: "Interested", tone: "primary" },
+  follow_up: { label: "Follow up", tone: "warning" },
+  quotation_sent: { label: "Quotation sent", tone: "violet" },
+  proposal: { label: "Proposal", tone: "violet" },
+  negotiation: { label: "Negotiation", tone: "violet" },
+  pending_payment: { label: "Pending payment", tone: "warning" },
+  won: { label: "Won", tone: "success" },
+  closed: { label: "Closed", tone: "success" },
+  converted: { label: "Converted", tone: "success" },
   not_able_to_contact: { label: "Not able to contact", tone: "subtle" },
   not_interested: { label: "Not interested", tone: "subtle" },
-  won: { label: "Won", tone: "success" },
-  pending_payment: { label: "Pending payment", tone: "warning" },
-  follow_up: { label: "Follow up", tone: "warning" },
   lost: { label: "Lost", tone: "destructive" },
   dnp: { label: "DNP", tone: "subtle" },
+  rejected: { label: "Rejected", tone: "destructive" },
 };
 
 import type { Lead } from '../types';

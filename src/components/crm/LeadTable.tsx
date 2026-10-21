@@ -81,7 +81,7 @@ export function LeadTable({ leads, admin }: { leads: Lead[]; admin?: boolean }) 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto flex-1 sm:flex-initial">
           <select className={cn(selectCls, "flex-1 sm:flex-initial min-w-[110px]")} value={status} onChange={(e) => { setStatus(e.target.value); setPage(0); }}>
             <option value="">All statuses</option>
-            {LEAD_STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
+            {LEAD_STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s]?.label || s}</option>)}
           </select>
           <select className={cn(selectCls, "flex-1 sm:flex-initial min-w-[95px]")} value={priority} onChange={(e) => { setPriority(e.target.value); setPage(0); }}>
             <option value="">Any priority</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
@@ -343,7 +343,7 @@ function LeadDrawer({ lead, onClose, onSave }: { lead: Lead | null; onClose: () 
                 <div className="eyebrow">Update lead</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <select className={selectCls} value={status} onChange={(e) => setStatus(e.target.value as any)}>
-                    {LEAD_STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
+                    {LEAD_STATUSES.map((s) => <option key={s} value={s}>{STATUS_META[s]?.label || s}</option>)}
                   </select>
                   <select className={selectCls} value={priority} onChange={(e) => setPriority(e.target.value as any)}>
                     <option value="high">high</option><option value="medium">medium</option><option value="low">low</option>
