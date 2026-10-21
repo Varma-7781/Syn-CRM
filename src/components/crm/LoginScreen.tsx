@@ -76,6 +76,9 @@ function LoginForm() {
     try {
       const user = await login(email, pw, role);
       const targetRole = user?.role || role;
+      if (role === "admin" && user?.role === "sales") {
+        toast.info("Logged in as Sales Representative. Opening your Sales Cockpit!");
+      }
       navigate({
         to: targetRole === "admin" ? "/admin/overview" : "/sales/pipeline",
         replace: true,

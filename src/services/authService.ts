@@ -130,16 +130,6 @@ export const loginUser = async (
         console.warn('Could not save user to Firestore:', err);
       }
     }
-  } else if (preferredRole && user.role !== preferredRole) {
-    // If user explicitly toggled role on login screen, update role
-    user.role = preferredRole;
-    if (isFirebaseEnabled() && db) {
-      try {
-        await setDoc(doc(db, 'users', user.id), { role: preferredRole }, { merge: true });
-      } catch (err) {
-        console.warn('Could not update role in Firestore:', err);
-      }
-    }
   }
 
   // Save active user to localStorage for session persistence
