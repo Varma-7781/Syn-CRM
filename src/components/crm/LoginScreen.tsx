@@ -10,16 +10,16 @@ import { resetPassword } from "@/services/authService";
 export function LoginScreen() {
   const { theme, toggle } = useTheme();
   return (
-    <div className="relative min-h-screen lg:h-screen lg:min-h-0 lg:max-h-screen overflow-x-hidden overflow-y-auto lg:overflow-hidden bg-background lg:grid lg:grid-cols-[1.12fr_1fr]">
+    <div className="relative h-[100dvh] max-h-[100dvh] overflow-hidden [@media(max-height:540px)]:overflow-y-auto bg-background lg:grid lg:grid-cols-[1.12fr_1fr]">
       <BrandSide />
-      <div className="relative flex min-h-screen lg:min-h-0 lg:h-full lg:max-h-screen flex-col justify-between overflow-x-hidden overflow-y-auto lg:overflow-hidden bg-background">
+      <div className="relative flex h-[100dvh] max-h-[100dvh] lg:h-full lg:max-h-screen flex-col justify-between overflow-hidden [@media(max-height:540px)]:overflow-y-auto bg-background">
         {/* Full Business Doodle Pattern Background (NexLead CRM) */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 z-0 login-doodle-bg"
         />
 
-        <div className="relative z-10 flex items-center justify-between px-4 sm:px-5 pt-3.5 lg:justify-end lg:px-8 lg:pt-4">
+        <header className="relative z-10 flex h-14 shrink-0 items-center justify-between px-4 sm:px-6 pt-1 lg:justify-end lg:px-8 lg:pt-3">
           <div className="flex items-center lg:hidden">
             <Wordmark size="md" />
           </div>
@@ -38,15 +38,16 @@ export function LoginScreen() {
               )}
             </span>
           </button>
-        </div>
-        <MobileStrip />
-        <div className="relative z-10 flex flex-1 min-h-0 items-center justify-center px-3.5 sm:px-6 py-4 lg:py-2">
+        </header>
+
+        <main className="relative z-10 flex flex-1 min-h-0 items-center justify-center px-4 sm:px-6 py-2 my-auto">
           {/* Floating Login Card Modal over the Doodle Background */}
-          <div className="w-full max-w-[415px] rounded-2xl border border-border/80 bg-surface/92 p-4 sm:p-6 shadow-2xl backdrop-blur-xl light:bg-white/94 light:border-border/70 light:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.18)]">
+          <div className="w-full max-w-[390px] sm:max-w-[415px] mx-auto rounded-2xl border border-border/80 bg-surface/94 p-5 sm:p-6 shadow-2xl backdrop-blur-xl light:bg-white/96 light:border-border/70 light:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.18)]">
             <LoginForm />
           </div>
-        </div>
-        <footer className="relative z-10 flex items-center justify-between px-4 sm:px-5 pb-3 pt-2 text-[11px] font-medium text-muted-foreground lg:px-8 lg:pb-3.5 lg:pt-0">
+        </main>
+
+        <footer className="relative z-10 flex h-10 shrink-0 items-center justify-between px-4 sm:px-6 pb-2 text-[11px] font-medium text-muted-foreground lg:px-8 lg:pb-3.5">
           <span>© 2026 NexLead CRM</span>
           <span className="flex items-center gap-1.5"><ShieldCheck className="size-3 text-success" /> Encrypted session</span>
         </footer>
@@ -565,22 +566,6 @@ function Workspace() {
             </div>
           ))}
         </div>
-      </div>
-    </div>
-  );
-}
-
-function MobileStrip() {
-  return (
-    <div className="relative z-10 mx-5 mt-6 overflow-hidden rounded-xl border border-border/80 bg-surface/92 p-4 shadow-lg backdrop-blur-md lg:hidden light:bg-white/94 light:border-border/70">
-      <div className="text-[17px] font-semibold leading-snug tracking-tight">Powering smarter <span className="text-steel">business operations.</span></div>
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        {[["Pipeline", "319"], ["Won", "₹42.6L"], ["Conv.", "31.8%"]].map(([k, v]) => (
-          <div key={k} className="rounded-md border border-border bg-elevated/80 px-2.5 py-2 light:bg-surface/80">
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{k}</div>
-            <div className="num mt-0.5 text-[14px] text-foreground">{v}</div>
-          </div>
-        ))}
       </div>
     </div>
   );
