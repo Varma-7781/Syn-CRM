@@ -14,9 +14,9 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/admin/reports")({
   head: () => ({
     meta: [
-      { title: "Analytics Reports — SYNTRAXS CRM" },
+      { title: "Analytics Reports — NexLead CRM" },
       { name: "description", content: "Lead audit, revenue and team performance, and activity ledger reports." },
-      { property: "og:title", content: "Analytics Reports — SYNTRAXS CRM" },
+      { property: "og:title", content: "Analytics Reports — NexLead CRM" },
       { property: "og:description", content: "Lead audit, revenue and team performance, and activity ledger reports." },
     ],
   }),
@@ -92,7 +92,7 @@ function Reports() {
     if (tab === 0) {
       // 1. LEAD AUDIT REPORT
       const summaryData = [
-        ["SYNTRAXS TECHNOLOGIES - LEAD AUDIT REPORT"],
+        ["NEXLEAD CRM - LEAD AUDIT REPORT"],
         [`Generated: ${new Date().toLocaleString()}`],
         [],
         ["METRIC", "VALUE"],
@@ -128,12 +128,12 @@ function Reports() {
       const leadsSheet = XLSX.utils.aoa_to_sheet(leadsData);
       XLSX.utils.book_append_sheet(workbook, leadsSheet, "Lead Details");
 
-      XLSX.writeFile(workbook, `Syntraxs_Lead_Audit_${dateStr}.xlsx`);
+      XLSX.writeFile(workbook, `NexLead_Lead_Audit_${dateStr}.xlsx`);
       toast.success("Lead Audit XLSX downloaded");
     } else if (tab === 1) {
       // 2. REVENUE & TEAM PERFORMANCE REPORT
       const summaryData = [
-        ["SYNTRAXS TECHNOLOGIES - TEAM PERFORMANCE REPORT"],
+        ["NEXLEAD CRM - TEAM PERFORMANCE REPORT"],
         [`Generated: ${new Date().toLocaleString()}`],
         [],
         ["REP", "TARGET", "ACHIEVED", "REALIZATION %", "ASSIGNED LEADS", "WON DEALS"],
@@ -171,12 +171,12 @@ function Reports() {
         XLSX.utils.book_append_sheet(workbook, memberSheet, sheetName);
       });
 
-      XLSX.writeFile(workbook, `Syntraxs_Team_Performance_${dateStr}.xlsx`);
+      XLSX.writeFile(workbook, `NexLead_Team_Performance_${dateStr}.xlsx`);
       toast.success("Team Performance XLSX downloaded");
     } else {
       // 3. ACTIVITY LEDGER REPORT
       const summaryData = [
-        ["SYNTRAXS TECHNOLOGIES - ACTIVITY LEDGER REPORT"],
+        ["NEXLEAD CRM - ACTIVITY LEDGER REPORT"],
         [`Generated: ${new Date().toLocaleString()}`],
         [],
         ["ACTIVITY TYPE", "TOTAL LOGGED"],
@@ -198,7 +198,7 @@ function Reports() {
       const detailsSheet = XLSX.utils.aoa_to_sheet(activityData);
       XLSX.utils.book_append_sheet(workbook, detailsSheet, "Activity Details");
 
-      XLSX.writeFile(workbook, `Syntraxs_Activity_Ledger_${dateStr}.xlsx`);
+      XLSX.writeFile(workbook, `NexLead_Activity_Ledger_${dateStr}.xlsx`);
       toast.success("Activity Ledger XLSX downloaded");
     }
   };

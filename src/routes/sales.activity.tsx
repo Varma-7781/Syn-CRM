@@ -9,9 +9,9 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/sales/activity")({
   head: () => ({
     meta: [
-      { title: "Recent Activity Log — SYNTRAXS CRM" },
+      { title: "Recent Activity Log — NexLead CRM" },
       { name: "description", content: "Chronological log of your calls, emails, WhatsApp messages and meetings." },
-      { property: "og:title", content: "Recent Activity Log — SYNTRAXS CRM" },
+      { property: "og:title", content: "Recent Activity Log — NexLead CRM" },
       { property: "og:description", content: "Chronological log of your calls, emails, WhatsApp messages and meetings." },
     ],
   }),

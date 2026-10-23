@@ -1,6 +1,6 @@
 /**
  * Production-Safe Logger Utility
- * SYNTRAXS CRM Security Hardening
+ * NexLead CRM Security Hardening
  *
  * Ensures:
  * 1. Sensitive PII (emails, passwords, tokens, API keys) is never printed to the browser console.

@@ -185,7 +185,7 @@ export function FollowUpReminderPopup({
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
                   <Phone size={14} color="#4ade80" />
-                  <a href={`tel:${lead.phone}`} style={{ fontSize: '13.5px', color: '#e2e8f0', textDecoration: 'none', fontWeight: '500' }}>
+                  <a href={`tel:${(lead.phone || '').replace(/[^0-9+]/g, '')}`} style={{ fontSize: '13.5px', color: '#e2e8f0', textDecoration: 'none', fontWeight: '500' }}>
                     {lead.phone}
                   </a>
                 </div>

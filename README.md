@@ -1,9 +1,9 @@
-# SYNTRAXS CRM — Enterprise Customer Relationship Management System
+# NEXLEAD CRM — Enterprise Customer Relationship Management System
 
 > **Official Technical & Operational Documentation**  
-> **Application Package:** `lovable-syntraxs-ui`  
-> **Target Enterprise:** Syntraxs Technologies  
-> **Platform Version:** 2.4.0 (Production Release)  
+> **Application Package:** `nexlead-crm`  
+> **Target Brand:** NexLead (NexLead CRM)  
+> **Platform Version:** 2.5.0 (Production Release)  
 > **Architecture:** TanStack Start (React 19 + TypeScript + Vite 8 + Nitro) + Google Cloud Firestore & Firebase Authentication  
 > **Date:** October 2026  
 
@@ -39,12 +39,12 @@
 ## 1. Project Overview
 
 ### 1.1 Purpose & Mission
-**SYNTRAXS CRM** is an enterprise-grade, high-velocity customer relationship management workspace engineered for B2B technology providers, enterprise software consultancies, and digital agencies. Built to bridge executive pipeline visibility with day-to-day sales execution, the system replaces fractured spreadsheets, manual follow-up logs, and siloed communication with a synchronized real-time operational dashboard.
+**NEXLEAD CRM** is an enterprise-grade, high-velocity customer relationship management workspace engineered for B2B technology providers, enterprise software consultancies, and digital agencies. Built to bridge executive pipeline visibility with day-to-day sales execution, the system replaces fractured spreadsheets, manual follow-up logs, and siloed communication with a synchronized real-time operational dashboard.
 
 ### 1.2 Business Problems Solved
 1. **Pipeline & Lead Leakage**: High-intent prospects slipping through cracks due to unstandardized lead capture, ambiguous ownership, and unrecorded interactions.
 2. **Follow-Up Inconsistency**: Sales representatives missing scheduled follow-ups due to the absence of automated desktop reminders and deadline countdown tickers.
-3. **Delayed Executive Reaction**: Leadership learning about high-intent or interested prospects hours or days late. Syntraxs CRM triggers instant procedural audio chimes and in-app alert queues the moment a representative marks a prospect as interested.
+3. **Delayed Executive Reaction**: Leadership learning about high-intent or interested prospects hours or days late. NexLead CRM triggers instant procedural audio chimes and in-app alert queues the moment a representative marks a prospect as interested.
 4. **Disconnected Quota & Revenue Tracking**: Management lacking a single source of truth for individual quota realization, conversion velocity, and weighted revenue forecasting.
 5. **Slow Lead Onboarding**: Cumbersome manual data entry when acquiring lead lists. The system provides intelligent Excel/CSV imports with header fuzzy-matching, date/currency normalization, and automated batching.
 
@@ -78,7 +78,7 @@ The application strictly implements two primary role personas verified in both c
 
 ## 2. Feature Overview
 
-The features below are verified as fully implemented in [`lovable-syntraxs-ui/src`](file:///C:/Users/Asus/Downloads/Syntraxs-Proj/zoopiter_crm_oct/lovable-syntraxs-ui/src).
+The features below are verified as fully implemented in [`src/`](file:///C:/Users/Asus/Downloads/Syntraxs-Proj/zoopiter_crm_oct/src).
 
 | Feature Module | Primary Route | Role Access | Implementation Status | Data Source |
 | :--- | :--- | :--- | :--- | :--- |
@@ -260,8 +260,8 @@ flowchart TD
 ### 4.2 Architecture Components
 - **Client Application**: Single-page application rendered via React 19 and TanStack Start, bundled with Vite 8.
 - **Styling Architecture**: Tailwind CSS 4 utilizing OKLCH color palettes, CSS variables for dynamic light/dark theming, and `@tailwindcss/vite`.
-- **Type Safety**: End-to-end TypeScript interfaces ([`src/types/index.ts`](file:///C:/Users/Asus/Downloads/Syntraxs-Proj/zoopiter_crm_oct/lovable-syntraxs-ui/src/types/index.ts)) covering leads, activities, targets, and user profiles.
-- **State & Subscriptions**: React Context ([`CRMContext`](file:///C:/Users/Asus/Downloads/Syntraxs-Proj/zoopiter_crm_oct/lovable-syntraxs-ui/src/context/CRMContext.tsx)) manages four simultaneous live Firestore `onSnapshot` listeners, maintaining synchronized state without manual polling.
+- **Type Safety**: End-to-end TypeScript interfaces ([`src/types/index.ts`](file:///C:/Users/Asus/Downloads/Syntraxs-Proj/zoopiter_crm_oct/src/types/index.ts)) covering leads, activities, targets, and user profiles.
+- **State & Subscriptions**: React Context ([`CRMContext`](file:///C:/Users/Asus/Downloads/Syntraxs-Proj/zoopiter_crm_oct/src/context/CRMContext.tsx)) manages four simultaneous live Firestore `onSnapshot` listeners, maintaining synchronized state without manual polling.
 - **Serverless Backend**: Google Cloud Firestore (Native Mode) provides document storage. Firebase Authentication manages secure user identities. Firebase Cloud Functions (`functions/src/index.ts`) provide privileged server-side user provisioning.
 
 ---
@@ -269,7 +269,7 @@ flowchart TD
 ## 5. Repository Structure
 
 ```
-lovable-syntraxs-ui/
+nexlead-crm/
 ├── .env                              # Local active environment variables (Git-ignored)
 ├── .env.example                      # Reference environment template with placeholders
 ├── .gitignore                        # Git exclusion rules
@@ -277,6 +277,10 @@ lovable-syntraxs-ui/
 ├── bunfig.toml                       # Bun configuration
 ├── components.json                   # shadcn/ui design system registry
 ├── eslint.config.js                  # ESLint 9 configuration
+├── firebase.json                     # Firebase deployment configuration
+├── firestore.rules                   # Firestore role-based security rules
+├── nexlead_10_client_demo_leads.csv  # Sample lead dataset for CSV imports
+├── nexlead_10_client_demo_leads.xlsx # Sample lead dataset for Excel imports
 ├── package.json                      # Project metadata, scripts, and dependencies
 ├── tsconfig.json                     # TypeScript compiler options
 ├── vite.config.ts                    # Vite 8 build & TanStack Start configuration
@@ -287,20 +291,25 @@ lovable-syntraxs-ui/
 │   └── src/
 │       └── index.ts                  # createSalesUser Callable Cloud Function implementation
 ├── public/                           # Static assets served at root URL
-│   ├── favicon.png                   # Syntraxs browser favicon
+│   ├── favicon.png                   # NexLead browser favicon
 │   ├── login-frame.png               # Brand login backdrop artwork
-│   ├── syntraxs-logo-dark.png        # Official dark-mode corporate logo
-│   ├── syntraxs-logo-light.png       # Official light-mode corporate logo
-│   ├── syntraxs-mark.png             # Official icon mark
+│   ├── dashboard-doodles.png         # CRM dashboard watermark pattern
+│   ├── nexlead-logo.png              # Primary official corporate logo
+│   ├── nexlead-logo-dark.png         # Official dark-mode corporate logo
+│   ├── nexlead-mark.png              # Official light-mode icon mark
+│   ├── nexlead-mark-dark.png         # Official dark-mode icon mark
+│   ├── nexlead-wordmark.png          # Official light-mode wordmark
+│   ├── nexlead-wordmark-dark.png     # Official dark-mode wordmark
+│   ├── _headers                      # Security headers (Clickjacking & MIME-sniffing protection)
+│   ├── robots.txt                    # Standard web crawler directive
 │   └── sounds/
 │       ├── notification.mp3          # Secondary audio fallback
-│       └── notification.wav          # Secondary audio fallback
+│       └── notification.wav          # Primary notification chime
 ├── src/
 │   ├── router.tsx                    # TanStack Router instance factory
 │   ├── server.ts                     # SSR error handler wrapper for Nitro
 │   ├── start.ts                      # Client-side bootstrap entry
 │   ├── styles.css                    # Tailwind CSS 4 theme rules & design primitives
-│   ├── assets/                       # Asset metadata manifests
 │   ├── components/
 │   │   ├── crm/                      # Core CRM Domain Components
 │   │   │   ├── AddSalesRepresentativeDialog.tsx  # Modal dialog for sales rep creation

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { BrandMark, Wordmark, useTheme } from "@/components/crm/primitives";
 import { cn } from "@/lib/utils";
 import { useCRM } from "@/context/CRMContext";
+import { resetPassword } from "@/services/authService";
 
 export function LoginScreen() {
   const { theme, toggle } = useTheme();
@@ -12,7 +13,7 @@ export function LoginScreen() {
     <div className="relative min-h-screen lg:h-screen lg:min-h-0 lg:max-h-screen overflow-x-hidden overflow-y-auto lg:overflow-hidden bg-background lg:grid lg:grid-cols-[1.12fr_1fr]">
       <BrandSide />
       <div className="relative flex min-h-screen lg:min-h-0 lg:h-full lg:max-h-screen flex-col justify-between overflow-x-hidden overflow-y-auto lg:overflow-hidden bg-background">
-        {/* Full Business Doodle Pattern Background (Syntraxs CRM) */}
+        {/* Full Business Doodle Pattern Background (NexLead CRM) */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 z-0 login-doodle-bg"
@@ -46,7 +47,7 @@ export function LoginScreen() {
           </div>
         </div>
         <footer className="relative z-10 flex items-center justify-between px-4 sm:px-5 pb-3 pt-2 text-[11px] font-medium text-muted-foreground lg:px-8 lg:pb-3.5 lg:pt-0">
-          <span>© 2026 SYNTRAXS Technologies</span>
+          <span>© 2026 NexLead CRM</span>
           <span className="flex items-center gap-1.5"><ShieldCheck className="size-3 text-success" /> Encrypted session</span>
         </footer>
       </div>
@@ -58,51 +59,86 @@ function LoginForm() {
   const navigate = useNavigate();
   const { login } = useCRM();
   const [role, setRole] = useState<"admin" | "sales">("admin");
-  const [email, setEmail] = useState(import.meta.env.DEV ? "admin@syntraxs.com" : "");
-  const [pw, setPw] = useState(import.meta.env.DEV ? "password123" : "");
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [touched, setTouched] = useState({ email: false, pw: false });
   const [error, setError] = useState<string | null>(null);
 
-  const emailErr = touched.email && !/^\S+@\S+\.\S+$/.test(email) ? "Enter a valid work email" : null;
-  const pwErr = touched.pw && pw.length < 6 ? "Password must be at least 6 characters" : null;
+  // Guarantee fields remain completely blank on initial mount (clears any browser auto-inserted credentials)
+  useEffect(() => {
+    setEmail("");
+    setPw("");
+  }, []);
+
+  const emailErr =
+    touched.email &&
+    (!email.trim()
+      ? "Please enter your work email"
+      : !/^\S+@\S+\.\S+$/.test(email.trim())
+      ? "Enter a valid work email address"
+      : null);
+  const pwErr =
+    touched.pw &&
+    (!pw
+      ? "Please enter your password"
+      : pw.length < 6
+      ? "Password must be at least 6 characters"
+      : null);
 
   const handleRoleChange = (newRole: "admin" | "sales") => {
     setRole(newRole);
-    if (import.meta.env.DEV) {
-      if (newRole === "admin") {
-        setEmail("admin@syntraxs.com");
-        setPw("password123");
-      } else {
-        setEmail("sales@syntraxs.com");
-        setPw("password123");
-      }
-    } else {
-      setEmail("");
-      setPw("");
-    }
     setError(null);
+  };
+
+  const handleForgotPassword = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !/^\S+@\S+\.\S+$/.test(cleanEmail)) {
+      setTouched((t) => ({ ...t, email: true }));
+      toast.error("Please enter your work email above to request a password reset.");
+      return;
+    }
+    setResetLoading(true);
+    try {
+      toast.loading("Sending password reset email...", { id: "pw-reset" });
+      await resetPassword(cleanEmail);
+      toast.success("Password reset instructions have been sent to your email.", { id: "pw-reset" });
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to send reset email. Please try again.", { id: "pw-reset" });
+    } finally {
+      setResetLoading(false);
+    }
   };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+
     setTouched({ email: true, pw: true });
-    if (!/^\S+@\S+\.\S+$/.test(email) || pw.length < 6) { setError("Check the highlighted fields and try again."); return; }
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !/^\S+@\S+\.\S+$/.test(cleanEmail) || !pw || pw.length < 6) {
+      setError("Please check the highlighted fields and try again.");
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
-      const user = await login(email, pw, role);
+      const user = await login(cleanEmail, pw, role);
       const targetRole = user?.role || role;
       if (role === "admin" && user?.role === "sales") {
         toast.info("Logged in as Sales Representative. Opening your Sales Cockpit!");
+      } else if (role === "sales" && user?.role === "admin") {
+        toast.info("Logged in as Administrator. Opening Executive Overview!");
       }
       navigate({
         to: targetRole === "admin" ? "/admin/overview" : "/sales/pipeline",
         replace: true,
       });
     } catch (err: any) {
-      const msg = err?.message || "Failed to sign in. Please try again.";
+      const msg = err?.message || "Failed to sign in. Please verify your credentials and try again.";
       setError(msg);
       toast.error(msg);
     } finally {
@@ -112,91 +148,139 @@ function LoginForm() {
 
   return (
     <form onSubmit={submit} noValidate autoComplete="off" className="w-full">
+      {/* Decoy fields to intercept aggressive browser autofill heuristics */}
+      <div
+        aria-hidden="true"
+        className="sr-only"
+        style={{ position: "absolute", opacity: 0, pointerEvents: "none", height: 0, width: 0, overflow: "hidden" }}
+      >
+        <input type="text" name="fake_username_remember" tabIndex={-1} autoComplete="off" />
+        <input type="password" name="fake_password_remember" tabIndex={-1} autoComplete="off" />
+      </div>
+
       <div className="animate-rise" style={{ animationDelay: "350ms" }}>
-        <div className="eyebrow mb-1.5 flex items-center gap-2"><span className="size-1.5 rounded-full bg-success animate-pulse-dot" /> Workspace · syntraxs.crm</div>
+        <div className="eyebrow mb-1.5 flex items-center gap-2">
+          <span className="size-1.5 rounded-full bg-success animate-pulse-dot" /> Workspace · nexlead.crm
+        </div>
         <h1 className="text-[23px] font-bold tracking-[-0.02em] text-foreground sm:text-[25px]">Welcome back</h1>
         <p className="mt-1 text-[13px] text-muted-foreground">Sign in to continue to your workspace.</p>
       </div>
 
-      <div className="mt-4 space-y-3 animate-rise" style={{ animationDelay: "480ms" }}>
+      <div className="mt-4 space-y-3.5 animate-rise" style={{ animationDelay: "480ms" }}>
         <div>
           <div className="mb-1.5 text-[12.5px] font-semibold text-foreground">Sign in as</div>
           <div role="radiogroup" aria-label="Role" className="relative grid grid-cols-2 rounded-lg border border-border bg-surface p-1">
-            <span aria-hidden className={cn("absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-md border border-border-strong bg-elevated shadow-pop transition-transform duration-300 ease-[var(--ease-out)]", role === "sales" && "translate-x-full")} />
+            <span
+              aria-hidden
+              className={cn(
+                "absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-md border border-border-strong bg-elevated shadow-pop transition-transform duration-300 ease-[var(--ease-out)]",
+                role === "sales" && "translate-x-full"
+              )}
+            />
             {(["admin", "sales"] as const).map((r) => (
-              <button key={r} type="button" role="radio" aria-checked={role === r} onClick={() => handleRoleChange(r)}
-                className={cn("relative z-10 h-8 rounded-md text-[12.5px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", role === r ? "font-semibold text-foreground" : "font-medium text-muted-foreground hover:text-foreground")}>
-                {r === "admin" ? "Admin" : "Sales"}
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-medium text-muted-foreground mr-0.5">Quick:</span>
-            {[
-              { label: "Admin 1 (Primary)", role: "admin" as const, email: "admin@syntraxs.com" },
-              { label: "Admin 2 (Operations)", role: "admin" as const, email: "admin2@syntraxs.com" },
-              { label: "Sales (Rajesh)", role: "sales" as const, email: "rajesh@syntraxs.com" },
-              { label: "Sales (Executive)", role: "sales" as const, email: "sales@syntraxs.com" },
-            ].map((q) => (
               <button
-                key={q.email}
+                key={r}
                 type="button"
-                onClick={() => {
-                  setRole(q.role);
-                  setEmail(q.email);
-                  if (import.meta.env.DEV) {
-                    setPw("password123");
-                  } else {
-                    setPw("");
-                  }
-                  setError(null);
-                }}
+                role="radio"
+                aria-checked={role === r}
+                onClick={() => handleRoleChange(r)}
                 className={cn(
-                  "rounded border px-1.5 py-0.5 text-[10.5px] font-medium transition-colors",
-                  email === q.email ? "border-primary bg-primary text-primary-foreground font-semibold" : "border-border bg-surface text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  "relative z-10 h-8 rounded-md text-[12.5px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  role === r ? "font-semibold text-foreground" : "font-medium text-muted-foreground hover:text-foreground"
                 )}
               >
-                {q.label}
+                {r === "admin" ? "Admin" : "Sales"}
               </button>
             ))}
           </div>
         </div>
 
         <Field id="email" label="Work email" icon={Mail} error={emailErr}>
-          <input id="email" type="email" autoComplete="off" value={email} placeholder="admin@syntraxs.com"
-            onChange={(e) => setEmail(e.target.value)} onBlur={() => setTouched((t) => ({ ...t, email: true }))}
-            className="h-full w-full bg-transparent text-[13.5px] text-foreground outline-none placeholder:text-muted-foreground" />
+          <input
+            id="email"
+            name="nexlead_work_email"
+            type="email"
+            autoComplete="off"
+            data-lpignore="true"
+            data-1p-ignore="true"
+            value={email}
+            disabled={loading}
+            placeholder="name@company.com"
+            onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+            className="h-full w-full bg-transparent text-[13.5px] text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-50"
+          />
         </Field>
 
-        <Field id="pw" label="Password" icon={Lock} error={pwErr} trailing={
-          <button
-            type="button"
-            onClick={() => setShow((s) => !s)}
-            aria-label={show ? "Hide password" : "Show password"}
-            className="relative flex size-8 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <Eye className={cn("absolute inset-0 m-auto size-3.5 transition-all duration-200", show ? "scale-50 opacity-0" : "opacity-100")} />
-            <EyeOff className={cn("absolute inset-0 m-auto size-3.5 transition-all duration-200", show ? "opacity-100" : "scale-50 opacity-0")} />
-          </button>
-        } labelAction={<a href="#" className="text-[11.5px] font-medium text-primary hover:underline">Forgot?</a>}>
-          <input id="pw" type={show ? "text" : "password"} autoComplete="new-password" value={pw} placeholder="••••••••"
-            onChange={(e) => setPw(e.target.value)} onBlur={() => setTouched((t) => ({ ...t, pw: true }))}
-            className="h-full w-full bg-transparent text-[13.5px] text-foreground outline-none placeholder:text-muted-foreground" />
+        <Field
+          id="pw"
+          label="Password"
+          icon={Lock}
+          error={pwErr}
+          trailing={
+            <button
+              type="button"
+              onClick={() => setShow((s) => !s)}
+              aria-label={show ? "Hide password" : "Show password"}
+              className="relative flex size-8 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Eye className={cn("absolute inset-0 m-auto size-3.5 transition-all duration-200", show ? "scale-50 opacity-0" : "opacity-100")} />
+              <EyeOff className={cn("absolute inset-0 m-auto size-3.5 transition-all duration-200", show ? "opacity-100" : "scale-50 opacity-0")} />
+            </button>
+          }
+          labelAction={
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              disabled={resetLoading || loading}
+              className="text-[11.5px] font-medium text-primary hover:underline focus:outline-none disabled:opacity-50"
+            >
+              Forgot?
+            </button>
+          }
+        >
+          <input
+            id="pw"
+            name="nexlead_work_password"
+            type={show ? "text" : "password"}
+            autoComplete="new-password"
+            data-lpignore="true"
+            data-1p-ignore="true"
+            value={pw}
+            disabled={loading}
+            placeholder="••••••••"
+            onChange={(e) => setPw(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, pw: true }))}
+            className="h-full w-full bg-transparent text-[13.5px] text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-50"
+          />
         </Field>
 
         <div className={cn("grid transition-all duration-300", error ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")}>
           <div className="overflow-hidden">
-            <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-[12px] font-medium text-destructive"><AlertCircle className="size-3.5" />{error}</div>
+            <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-[12px] font-medium text-destructive">
+              <AlertCircle className="size-3.5 shrink-0" />
+              <span>{error}</span>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="mt-4 animate-rise" style={{ animationDelay: "600ms" }}>
-        <button type="submit" disabled={loading}
-          className="group relative flex h-11 sm:h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-md bg-primary text-[14px] sm:text-[13.5px] font-semibold text-primary-foreground shadow-cta transition-all duration-200 hover:-translate-y-px hover:bg-primary-hover active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-90">
+        <button
+          type="submit"
+          disabled={loading}
+          className="group relative flex h-11 sm:h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-md bg-primary text-[14px] sm:text-[13.5px] font-semibold text-primary-foreground shadow-cta transition-all duration-200 hover:-translate-y-px hover:bg-primary-hover active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-90"
+        >
           <span aria-hidden className="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-primary-foreground/15 to-transparent opacity-0 group-hover:opacity-100 group-hover:animate-scan" />
-          {loading ? (<><Loader2 className="size-3.5 animate-spin" /> Signing in…</>) : (<>Sign In <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-1" /></>)}
+          {loading ? (
+            <>
+              <Loader2 className="size-3.5 animate-spin" /> Signing in…
+            </>
+          ) : (
+            <>
+              Sign In <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-1" />
+            </>
+          )}
         </button>
         <p className="mt-2.5 text-center text-[11.5px] text-muted-foreground">Access is provisioned by your administrator.</p>
       </div>
@@ -302,8 +386,8 @@ function BrandSide() {
 
       <div className="relative z-10 flex h-full flex-col justify-between px-8 py-4 xl:px-14 xl:py-6">
         <div>
-          <div className="animate-rise self-start pb-2">
-            <Wordmark size="lg" />
+          <div className="animate-rise self-start pb-2.5">
+            <Wordmark size="xl" />
           </div>
           <div className="mt-3.5 max-w-[500px] animate-rise xl:mt-6" style={{ animationDelay: "120ms" }}>
             <h2 className="text-[26px] font-semibold leading-[1.08] tracking-[-0.03em] text-foreground xl:text-[36px]">

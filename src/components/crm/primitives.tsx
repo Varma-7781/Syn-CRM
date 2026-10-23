@@ -13,22 +13,19 @@ export function BrandMark({ className }: { className?: string }) {
     <span
       className={cn(
         "relative inline-flex items-center justify-center overflow-hidden rounded-md transition-all duration-300 ease-in-out",
-        "light:bg-[#0B0F19] light:border light:border-slate-800/90 light:p-1 light:shadow-sm",
-        isLight && "bg-[#0B0F19] border border-slate-800/90 p-1 shadow-sm",
         className
       )}
     >
       {!hasError ? (
         <img
-          src="/syntraxs-mark.png"
-          alt="SYNTRAXS"
-          className="h-full w-full object-contain filter drop-shadow-[0_2px_6px_rgba(0,140,255,0.2)]"
+          src={isLight ? "/nexlead-mark.png" : "/nexlead-mark-dark.png"}
+          alt="NexLead"
+          className="h-full w-full object-contain filter drop-shadow-[0_2px_6px_rgba(37,99,235,0.25)]"
           onError={() => setHasError(true)}
         />
       ) : (
         <svg viewBox="0 0 32 32" fill="none" className="h-3/4 w-3/4 text-primary" xmlns="http://www.w3.org/2000/svg">
-          <path d="M7 8L16 3L25 8V24L16 29L7 24V8Z" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" />
-          <path d="M12 12L20 20M20 12L12 20" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M6 26V6L18 20V6H26V26L14 12V26H6Z" fill="currentColor" />
         </svg>
       )}
     </span>
@@ -38,75 +35,59 @@ export function BrandMark({ className }: { className?: string }) {
 export function Wordmark({
   compact,
   className,
+  imageClassName,
   size = "md",
 }: {
   compact?: boolean;
   className?: string;
-  size?: "sm" | "md" | "lg";
+  imageClassName?: string;
+  size?: "sm" | "md" | "lg" | "xl";
 }) {
   const [imgError, setImgError] = useState(false);
   const { theme } = useTheme();
   const isLight = theme === "light";
 
   if (compact) {
-    return <BrandMark className={cn("size-8", className)} />;
+    return <BrandMark className={cn("size-9", className)} />;
   }
 
   const heightClass = {
-    sm: "h-5.5 max-h-[22px]",
-    md: "h-7 max-h-[28px]",
-    lg: "h-8.5 max-h-[34px]",
+    sm: "h-6.5 max-h-[26px]",
+    md: "h-8.5 sm:h-9 max-h-[36px]",
+    lg: "h-10.5 sm:h-11.5 max-h-[46px]",
+    xl: "h-13 sm:h-14 lg:h-15 max-h-[60px]",
   }[size];
 
   return (
     <div
       className={cn(
         "inline-flex items-center select-none transition-all duration-300 ease-in-out group",
-        // In light theme: sleek obsidian black container pill with smooth rounded corners, tech border, and subtle shadow
-        "light:bg-[#0B0F19] light:border light:border-slate-800/90 light:shadow-sm light:rounded-lg light:px-2.5 light:py-1",
-        isLight && "bg-[#0B0F19] border border-slate-800/90 shadow-sm rounded-lg px-2.5 py-1",
-        // In dark theme: completely seamless transparent integration
-        !isLight && "bg-transparent border-transparent p-0 shadow-none",
         className
       )}
     >
       {!imgError ? (
         <img
-          src="/syntraxs-logo.png"
-          alt="SYNTRAXS Technologies"
+          src={isLight ? "/nexlead-wordmark.png" : "/nexlead-wordmark-dark.png"}
+          alt="NexLead CRM"
           className={cn(
-            "w-auto object-contain transition-all duration-300 filter drop-shadow-[0_2px_8px_rgba(0,140,255,0.2)]",
-            heightClass
+            "w-auto object-contain transition-all duration-300 filter drop-shadow-[0_2px_8px_rgba(37,99,235,0.2)]",
+            heightClass,
+            imageClassName
           )}
           onError={() => setImgError(true)}
         />
       ) : (
         /* High-fidelity CSS/SVG Fallback matching the exact Typography and Letter Styling */
-        <div className="flex items-center gap-2">
-          <BrandMark className="size-6.5" />
-          <div className="h-4.5 w-px bg-slate-700/80" />
+        <div className="flex items-center gap-2.5">
+          <BrandMark className={size === "xl" ? "size-9" : size === "lg" ? "size-8" : "size-7"} />
+          <div className="h-5 w-px bg-slate-700/80" />
           <div className="leading-none">
-            <div className="flex items-center text-[12.5px] font-black tracking-[0.16em] uppercase">
-              <span className="bg-gradient-to-b from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">SYNTR</span>
-              {/* Custom 'A' with Glowing Electric Blue Triangle */}
-              <span className="relative inline-flex items-center justify-center bg-gradient-to-b from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-                A
-                <span
-                  aria-hidden="true"
-                  className="absolute bottom-[1.5px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[2.5px] border-r-[2.5px] border-b-[4.5px] border-l-transparent border-r-transparent border-b-[#00b4ff] drop-shadow-[0_0_6px_#00b4ff]"
-                />
-              </span>
-              {/* Custom 'X' in Vibrant 3D Electric Blue */}
-              <span className="bg-gradient-to-b from-[#38bdf8] via-[#0284c7] to-[#0369a1] bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(56,189,248,0.7)]">
-                X
-              </span>
-              <span className="bg-gradient-to-b from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">S</span>
+            <div className={cn("flex items-center font-black tracking-[-0.02em]", size === "xl" ? "text-[18px]" : size === "lg" ? "text-[16px]" : "text-[14.5px]")}>
+              <span className={isLight ? "text-slate-900" : "text-white"}>Nex</span>
+              <span className="text-[#3078FB]">Lead</span>
             </div>
-            {/* TECHNOLOGIES with Aerodynamic Left and Right Tapered Wings */}
-            <div className="mt-0.5 flex items-center justify-between text-[7px] font-bold text-[#00b4ff] tracking-[0.22em]">
-              <span className="inline-block w-3 h-[1.5px] bg-gradient-to-r from-transparent to-[#00b4ff]" />
-              <span className="px-0.5">TECHNOLOGIES</span>
-              <span className="inline-block w-3 h-[1.5px] bg-gradient-to-l from-transparent to-[#00b4ff]" />
+            <div className="mt-0.5 text-[8.5px] font-bold text-muted-foreground tracking-[0.2em] uppercase">
+              CRM
             </div>
           </div>
         </div>

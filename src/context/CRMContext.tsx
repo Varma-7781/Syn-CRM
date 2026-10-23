@@ -49,6 +49,9 @@ interface CRMContextType {
   createSalesRepresentative: (
     data: import('../types').CreateSalesRepresentativeInput
   ) => Promise<{ success: boolean; user?: User; error?: string }>;
+  createAdminUser: (
+    data: import('../types').CreateAdminInput
+  ) => Promise<{ success: boolean; user?: User; error?: string }>;
   playNotificationSound: () => void;
 }
 
@@ -221,6 +224,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
             );
             if (liveMatch && (liveMatch.role !== prevUser.role || liveMatch.name !== prevUser.name)) {
               if (typeof window !== 'undefined') {
+                localStorage.setItem('nexlead_active_user', JSON.stringify(liveMatch));
                 localStorage.setItem('syntraxs_active_user', JSON.stringify(liveMatch));
               }
               return liveMatch;
@@ -545,6 +549,14 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const createAdminUser = useCallback(
+    async (data: import('../types').CreateAdminInput) => {
+      const res = await userService.createAdminUser(data);
+      return res;
+    },
+    []
+  );
+
   const value = useMemo(
     () => ({
       currentUser,
@@ -567,6 +579,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       addActivity,
       addUser,
       createSalesRepresentative,
+      createAdminUser,
       playNotificationSound: () => playNotificationSound(0.5),
     }),
     [
@@ -590,6 +603,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       addActivity,
       addUser,
       createSalesRepresentative,
+      createAdminUser,
     ]
   );
 

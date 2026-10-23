@@ -4,7 +4,7 @@
  */
 
 import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, deleteUser as deleteAuthUser } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, deleteUser as deleteAuthUser, updateProfile } from 'firebase/auth';
 import {
   collection,
   doc,
@@ -19,7 +19,7 @@ import {
   setDoc,
 } from 'firebase/firestore';
 import { firebaseConfig, auth, db, isFirebaseEnabled } from '../config/firebase';
-import { User, CreateSalesRepresentativeInput } from '../types';
+import { User, CreateSalesRepresentativeInput, CreateAdminInput } from '../types';
 import { logger, maskEmail } from '../lib/logger';
 import { getActiveUser } from './authService';
 
@@ -159,7 +159,7 @@ export const createSalesUser = async (
           password,
           phone: input.phone || '',
           department: input.department || 'Sales',
-          targetQuota: input.targetQuota || 1500000,
+          targetQuota: Math.max(0, Math.min(Number(input.targetQuota) || 1500000, 1000000000)),
         }),
       });
       const data = await res.json();
@@ -186,6 +186,10 @@ export const createSalesUser = async (
     const userCred = await createUserWithEmailAndPassword(secondaryAuth, cleanEmail, password);
     createdAuthUser = userCred.user;
     authUid = createdAuthUser.uid;
+
+    if (cleanName) {
+      await updateProfile(createdAuthUser, { displayName: cleanName }).catch(() => {});
+    }
 
     await signOut(secondaryAuth).catch(() => {});
     await deleteApp(secondaryApp).catch(() => {});
@@ -228,7 +232,8 @@ export const createSalesUser = async (
 
     // 6. Create monthly target quota for the new rep in Firestore
     const currentPeriod = new Date().toISOString().slice(0, 7);
-    const targetQuota = Number(input.targetQuota) || 1500000;
+    const parsedQuota = Number(input.targetQuota);
+    const targetQuota = isNaN(parsedQuota) ? 1500000 : Math.max(0, Math.min(parsedQuota, 1000000000));
     await setDoc(doc(db!, 'targets', `target_${authUid}_${currentPeriod}`), {
       userId: authUid,
       userName: cleanName,
@@ -242,6 +247,164 @@ export const createSalesUser = async (
     return { success: true, user: userProfile };
   } catch {
     logger.error('[USERS] Firestore profile creation failed');
+
+    // Rollback: Attempt cleanup of newly created Auth user to avoid orphan account
+    if (createdAuthUser) {
+      try {
+        const cleanupApp = initializeApp(firebaseConfig, `cleanup-${Date.now()}`);
+        const cleanupAuth = getAuth(cleanupApp);
+        const reSign = await signInWithEmailAndPassword(cleanupAuth, cleanEmail, password);
+        await deleteAuthUser(reSign.user);
+        await deleteApp(cleanupApp);
+      } catch {
+        logger.warn('[USERS] Could not roll back auth account');
+      }
+    }
+
+    return {
+      success: false,
+      error: 'Firebase Auth account was created, but failed to save profile to Firestore.',
+    };
+  }
+};
+
+/**
+ * Create a new Administrator in Firebase Authentication and Firestore.
+ * Uses an isolated secondary Firebase App instance so the current Administrator
+ * remains 100% signed in without their session or token being touched.
+ */
+export const createAdminUser = async (
+  input: CreateAdminInput
+): Promise<{ success: boolean; user?: User; error?: string }> => {
+  if (!guardFirebase()) {
+    return { success: false, error: 'Firebase is not initialized or offline.' };
+  }
+
+  // Enforce Authorization: Only CRM administrators can provision admin accounts
+  const activeUser = getActiveUser();
+  if (!activeUser || activeUser.role !== 'admin') {
+    logger.warn('[USERS] Unauthorized admin provisioning attempt rejected');
+    return { success: false, error: 'Unauthorized: Only CRM administrators can create administrator accounts.' };
+  }
+
+  // 1. Validate inputs
+  const cleanName = (input.name || '').trim();
+  const cleanEmail = (input.email || '').trim().toLowerCase();
+  const password = input.password || '';
+
+  if (!cleanName || cleanName.length < 2) {
+    return { success: false, error: 'Full name is required (at least 2 characters).' };
+  }
+  if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+    return { success: false, error: 'Please enter a valid work email address.' };
+  }
+  if (!password || password.length < 6) {
+    return { success: false, error: 'Password must be at least 6 characters long.' };
+  }
+
+  // 2. Check for duplicate email in Firestore users
+  try {
+    const existingSnap = await getDocs(collection(db!, COLLECTION_NAME));
+    const duplicate = existingSnap.docs.some(
+      (d) => d.data().email && d.data().email.toLowerCase() === cleanEmail
+    );
+    if (duplicate) {
+      return { success: false, error: 'A user with this email already exists in the CRM.' };
+    }
+  } catch {
+    logger.warn('[USERS] Could not check existing users');
+  }
+
+  // 3. Optional server endpoint invocation if configured
+  const cloudFunctionUrl = import.meta.env.VITE_CREATE_ADMIN_FUNCTION_URL;
+  if (cloudFunctionUrl && auth?.currentUser) {
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const res = await fetch(cloudFunctionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          name: cleanName,
+          email: cleanEmail,
+          password,
+          phone: input.phone || '',
+          department: input.department || 'Management',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error || 'Server error creating administrator' };
+      }
+      return { success: true, user: data.user };
+    } catch {
+      logger.warn('[USERS] Cloud Function unavailable, using direct isolated secondary auth provisioning');
+    }
+  }
+
+  // 4. Isolated Secondary Firebase App Provisioning
+  // Guarantees existing Admin stays completely signed in on the default app
+  const secondaryAppName = `provision-admin-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  let secondaryApp: any = null;
+  let createdAuthUser: any = null;
+  let authUid = '';
+
+  try {
+    secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
+    const secondaryAuth = getAuth(secondaryApp);
+
+    const userCred = await createUserWithEmailAndPassword(secondaryAuth, cleanEmail, password);
+    createdAuthUser = userCred.user;
+    authUid = createdAuthUser.uid;
+
+    if (cleanName) {
+      await updateProfile(createdAuthUser, { displayName: cleanName }).catch(() => {});
+    }
+
+    await signOut(secondaryAuth).catch(() => {});
+    await deleteApp(secondaryApp).catch(() => {});
+    secondaryApp = null;
+  } catch (authErr: any) {
+    if (secondaryApp) {
+      await deleteApp(secondaryApp).catch(() => {});
+    }
+    if (authErr.code === 'auth/email-already-in-use') {
+      return { success: false, error: 'This email is already registered in Firebase Authentication.' };
+    }
+    if (authErr.code === 'auth/weak-password') {
+      return { success: false, error: 'Password should be at least 6 characters long.' };
+    }
+    if (authErr.code === 'auth/invalid-email') {
+      return { success: false, error: 'Invalid email address format.' };
+    }
+    return {
+      success: false,
+      error: 'Failed to create user in Firebase Authentication. Please verify details.',
+    };
+  }
+
+  // 5. Create Firestore user profile under the exact matching Auth UID
+  try {
+    const userProfile: User = {
+      id: authUid,
+      name: cleanName,
+      email: cleanEmail,
+      role: 'admin', // Enforce admin role strictly
+      department: input.department?.trim() || 'Management',
+      phone: input.phone?.trim() || '',
+      createdAt: Timestamp.now(),
+    };
+
+    await setDoc(doc(db!, COLLECTION_NAME, authUid), {
+      ...userProfile,
+      createdBy: auth?.currentUser?.uid || activeUser.id || 'admin',
+    });
+
+    return { success: true, user: userProfile };
+  } catch {
+    logger.error('[USERS] Firestore admin profile creation failed');
 
     // Rollback: Attempt cleanup of newly created Auth user to avoid orphan account
     if (createdAuthUser) {

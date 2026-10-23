@@ -2,7 +2,7 @@ import { memo } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Custom dual-theme business doodle illustration system for the Syntraxs CRM hero background.
+ * Custom dual-theme business doodle illustration system for the NexLead CRM hero background.
  *
  * Hand-drawn vector outlines with rounded strokes and restrained enterprise accents:
  * - Upward-trending revenue charts, bar charts, and growth arrows

@@ -96,3 +96,11 @@ export interface CreateSalesRepresentativeInput {
   department?: string;
   targetQuota?: number;
 }
+
+export interface CreateAdminInput {
+  name: string;
+  email: string;
+  password: string;
+  phone?: string;
+  department?: string;
+}

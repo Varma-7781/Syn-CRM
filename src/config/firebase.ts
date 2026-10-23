@@ -1,5 +1,5 @@
 /**
- * Firebase Configuration for SYNTRAXS CRM
+ * Firebase Configuration for NexLead CRM
  */
 
 import { initializeApp, FirebaseApp, getApps, getApp } from 'firebase/app';
@@ -9,7 +9,7 @@ import type { Analytics } from 'firebase/analytics';
 import type { Messaging } from 'firebase/messaging';
 import { logger } from '../lib/logger';
 
-// Official Production Firebase Configuration for SYNTRAXS CRM
+// Official Production Firebase Configuration for NexLead CRM
 const SYNTRAXS_FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDYBDR-7wEJx8s7LOME-Dm6iCtxhj_72a0',
   authDomain: 'crm-syntraxs.firebaseapp.com',
@@ -36,7 +36,7 @@ export const firebaseConfig = {
   measurementId: (!isLegacyEnvironment && import.meta.env.VITE_FIREBASE_MEASUREMENT_ID) || SYNTRAXS_FIREBASE_CONFIG.measurementId,
 };
 
-// Syntraxs Firebase is always reliably configured
+// Production Firebase is always reliably configured
 const isFirebaseConfigured = () => {
   return !!(firebaseConfig.apiKey && firebaseConfig.projectId);
 };

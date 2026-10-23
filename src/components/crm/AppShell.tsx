@@ -85,7 +85,7 @@ export function AppShell({ role, children }: { role: "admin" | "sales"; children
   const user = currentUser
     ? { name: currentUser.name, role: currentUser.role === "admin" ? "Administrator" : "Sales Representative" }
     : role === "admin"
-    ? { name: "Syntraxs Admin", role: "Administrator" }
+    ? { name: "NexLead Admin", role: "Administrator" }
     : { name: "Rajesh Sharma", role: "Sales Representative" };
 
   const sidebar = (
@@ -630,7 +630,7 @@ function NotificationBell() {
                           </span>
                           {lead.phone && (
                             <a
-                              href={`tel:${lead.phone}`}
+                              href={`tel:${lead.phone.replace(/[^0-9+]/g, "")}`}
                               onClick={(e) => e.stopPropagation()}
                               className="text-[11px] text-primary hover:underline flex items-center gap-0.5 font-medium shrink-0"
                             >

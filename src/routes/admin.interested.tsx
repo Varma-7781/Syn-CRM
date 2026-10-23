@@ -27,9 +27,9 @@ function sanitizeCsvCell(val: unknown): string {
 export const Route = createFileRoute("/admin/interested")({
   head: () => ({
     meta: [
-      { title: "Interested Clients & Vendors — SYNTRAXS CRM" },
+      { title: "Interested Clients & Vendors — NexLead CRM" },
       { name: "description", content: "High-intent client pipeline flagged by the sales team." },
-      { property: "og:title", content: "Interested Clients & Vendors — SYNTRAXS CRM" },
+      { property: "og:title", content: "Interested Clients & Vendors — NexLead CRM" },
     ],
   }),
   component: InterestedPage,
@@ -123,7 +123,7 @@ function InterestedPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `syntraxs-interested-clients-${new Date().toISOString().split("T")[0]}.csv`;
+    a.download = `nexlead-interested-clients-${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Interested clients exported to CSV");
@@ -356,7 +356,7 @@ function InterestedPage() {
                         <div className="flex items-center justify-end gap-1.5">
                           {lead.phone && (
                             <a
-                              href={`tel:${lead.phone}`}
+                              href={`tel:${lead.phone.replace(/[^0-9+]/g, "")}`}
                               className="size-7 rounded-md border border-border bg-surface hover:bg-secondary text-primary flex items-center justify-center transition-colors shadow-xs"
                               title={`Call ${contactPerson} (${lead.phone})`}
                             >
@@ -367,7 +367,7 @@ function InterestedPage() {
                             <a
                               href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, "")}`}
                               target="_blank"
-                              rel="noreferrer"
+                              rel="noopener noreferrer"
                               className="size-7 rounded-md border border-border bg-surface hover:bg-emerald-500/10 hover:text-emerald-500 text-muted-foreground flex items-center justify-center transition-colors shadow-xs"
                               title="Chat on WhatsApp"
                             >
@@ -476,7 +476,7 @@ function InterestedPage() {
                 <div className="grid grid-cols-2 gap-2">
                   {activeLead.phone && (
                     <a
-                      href={`tel:${activeLead.phone}`}
+                      href={`tel:${activeLead.phone.replace(/[^0-9+]/g, "")}`}
                       className="flex items-center justify-center gap-2 h-9 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity"
                     >
                       <PhoneCall className="size-3.5" />
@@ -487,7 +487,7 @@ function InterestedPage() {
                     <a
                       href={`https://wa.me/${activeLead.phone.replace(/[^0-9]/g, "")}`}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       className="flex items-center justify-center gap-2 h-9 rounded-md bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors"
                     >
                       <MessageCircle className="size-3.5" />

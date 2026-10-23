@@ -30,6 +30,11 @@ function applySecurityHeaders(response: Response): Response {
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   headers.set("Cross-Origin-Opener-Policy", "same-origin");
   headers.set("X-XSS-Protection", "0");
+  headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+  headers.set(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+  );
 
   return new Response(response.body, {
     status: response.status,

@@ -10,9 +10,9 @@ import { useCRM } from "@/context/CRMContext";
 export const Route = createFileRoute("/admin/revenue")({
   head: () => ({
     meta: [
-      { title: "Revenue Analytics — SYNTRAXS CRM" },
+      { title: "Revenue Analytics — NexLead CRM" },
       { name: "description", content: "Revenue trajectory, rep contribution and acquisition sources." },
-      { property: "og:title", content: "Revenue Analytics — SYNTRAXS CRM" },
+      { property: "og:title", content: "Revenue Analytics — NexLead CRM" },
       { property: "og:description", content: "Revenue trajectory, rep contribution and acquisition sources." },
     ],
   }),

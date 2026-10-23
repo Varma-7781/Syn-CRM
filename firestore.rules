@@ -8,7 +8,12 @@ service cloud.firestore {
     
     // Verifies client has an active Firebase Authentication session
     function isAuthenticated() {
-      return request.auth != null;
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    // Safely checks whether user profile document exists
+    function hasUserProfile() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
     // Fetches the caller's Firestore user profile
@@ -19,7 +24,7 @@ service cloud.firestore {
     // Enforces strict role check via verified Firestore document.
     // Explicitly avoids insecure email regex heuristics.
     function isAdmin() {
-      return isAuthenticated() && getUserData().role == 'admin';
+      return hasUserProfile() && getUserData().get('role', '') == 'admin';
     }
 
     // Verifies whether caller is the document owner
@@ -30,9 +35,9 @@ service cloud.firestore {
     // Verifies whether caller is the assigned sales representative
     function isAssignedRep(leadData) {
       return isAuthenticated() && (
-        leadData.assignedTo == request.auth.uid ||
-        (leadData.assignedToName != null && leadData.assignedToName == getUserData().name) ||
-        (leadData.rep != null && leadData.rep == getUserData().name)
+        leadData.get('assignedTo', '') == request.auth.uid ||
+        (hasUserProfile() && leadData.get('assignedToName', '') == getUserData().get('name', '')) ||
+        (hasUserProfile() && leadData.get('rep', '') == getUserData().get('name', ''))
       );
     }
 
@@ -43,13 +48,24 @@ service cloud.firestore {
       // Authenticated team members can read team profiles for assignment and scorecards
       allow read: if isAuthenticated();
 
-      // Only administrators can create users, or users setting their own profile with non-admin role
-      allow create: if isAdmin() || (isOwner(userId) && request.resource.data.role == 'sales');
+      // Only administrators can create users, or a user creating their own profile strictly as 'sales'
+      allow create: if isAuthenticated() && (
+        isAdmin() || (
+          isOwner(userId) &&
+          request.resource.data.get('role', '') == 'sales' &&
+          request.resource.data.get('id', '') == userId
+        )
+      );
 
-      // Users may update their own contact details, but CANNOT escalate their role to admin.
+      // Users may update their own contact details, but CANNOT escalate their role or modify protected metadata.
       // Only existing admins can change user roles and department quotas.
-      allow update: if isAdmin() || (
-        isOwner(userId) && request.resource.data.role == resource.data.role
+      allow update: if isAuthenticated() && (
+        isAdmin() || (
+          isOwner(userId) &&
+          request.resource.data.get('role', '') == resource.data.get('role', '') &&
+          request.resource.data.get('id', '') == resource.data.get('id', '') &&
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'id', 'createdBy'])
+        )
       );
 
       // Strictly restrict user deletion to administrators
@@ -64,21 +80,26 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         isAdmin() ||
         isAssignedRep(resource.data) ||
-        resource.data.assignedTo == null ||
-        !('assignedTo' in resource.data)
+        resource.data.get('assignedTo', null) == null
       );
 
       // Authenticated team members can create leads (manual entry or batch import)
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated() && (
+        request.resource.data.get('companyName', '') is string ||
+        request.resource.data.get('company', '') is string
+      );
 
-      // Admins can update any lead; reps can update their assigned leads or status transitions
+      // Admins can update any lead; assigned reps can update their leads (but cannot reassign ownership);
+      // Non-assigned users can ONLY update specific follow-up and interest status transition fields.
       allow update: if isAuthenticated() && (
         isAdmin() ||
-        isAssignedRep(resource.data) ||
-        // Follow-up reminder engine & interest tagging
-        request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        (
+          isAssignedRep(resource.data) &&
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['assignedTo', 'assignedToName', 'rep'])
+        ) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'followUpStatus', 'followUpRemindedAt', 'followUpCompletedAt', 'followUpOverdueReason',
-          'status', 'interestedAt', 'interestedBy', 'interestedByName', 'lastContact'
+          'status', 'interestedAt', 'interestedBy', 'interestedByName', 'lastContact', 'updatedAt'
         ])
       );
 
@@ -104,12 +125,20 @@ service cloud.firestore {
       // Authenticated team members can read activity logs
       allow read: if isAuthenticated();
 
-      // Any authenticated team member can log calls, notes, or interactions
-      allow create: if isAuthenticated();
+      // Authenticated team members can log calls, notes, or interactions under their own UID, or admin
+      allow create: if isAuthenticated() && (
+        request.resource.data.get('userId', '') == request.auth.uid || isAdmin()
+      );
 
-      // Admins or activity authors can update/delete their own activity logs
-      allow update, delete: if isAdmin() || (
-        isAuthenticated() && resource.data.userId == request.auth.uid
+      // Admins or activity authors can update/delete their own activity logs without reassigning author
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        resource.data.get('userId', '') == request.auth.uid &&
+        request.resource.data.get('userId', '') == resource.data.get('userId', '')
+      );
+
+      allow delete: if isAdmin() || (
+        isAuthenticated() && resource.data.get('userId', '') == request.auth.uid
       );
     }
 

@@ -1,10 +1,11 @@
 /**
  * Authentication Service
- * SYNTRAXS CRM
+ * NexLead CRM
  */
 
 import {
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
   User as FirebaseUser,
 } from 'firebase/auth';
 import { doc, getDoc, getDocs, collection, query, where, limit } from 'firebase/firestore';
@@ -12,7 +13,7 @@ import { auth, db, isFirebaseEnabled } from '../config/firebase';
 import { User } from '../types';
 import { logger, maskEmail } from '../lib/logger';
 
-const STORAGE_KEY = 'syntraxs_active_user';
+export const STORAGE_KEY = 'nexlead_active_user';
 
 /**
  * Checks whether an active Firebase Auth session exists.
@@ -146,7 +147,10 @@ export const loginUser = async (
 export const getActiveUser = (): User | null => {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('zoopiter_active_user');
+    const raw =
+      localStorage.getItem(STORAGE_KEY) ||
+      localStorage.getItem('syntraxs_active_user') ||
+      localStorage.getItem('zoopiter_active_user');
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -160,6 +164,7 @@ export const logoutUser = async (): Promise<void> => {
   if (typeof window !== 'undefined') {
     try {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem('syntraxs_active_user');
       localStorage.removeItem('zoopiter_active_user');
     } catch {
       logger.error('[AUTH] Local session cleanup failed');
@@ -171,6 +176,32 @@ export const logoutUser = async (): Promise<void> => {
     } catch {
       logger.warn('[AUTH] Firebase signout encountered an issue');
     }
+  }
+};
+
+/**
+ * Send password reset email via Firebase Auth
+ */
+export const resetPassword = async (email: string): Promise<void> => {
+  const cleanEmail = (email || '').trim().toLowerCase();
+  if (!cleanEmail) {
+    throw new Error('Please enter your work email to receive password reset instructions.');
+  }
+  if (!isFirebaseEnabled() || !auth) {
+    throw new Error('Authentication service is currently unavailable. Please try again.');
+  }
+  try {
+    await sendPasswordResetEmail(auth, cleanEmail);
+  } catch (err: any) {
+    logger.warn(`[AUTH] Password reset failed for: ${maskEmail(cleanEmail)} (code: ${err?.code || 'unknown'})`);
+    const code = err?.code || '';
+    if (code === 'auth/user-not-found' || code === 'auth/invalid-email') {
+      throw new Error('No account found with this email address. Please contact your administrator.');
+    }
+    if (code === 'auth/too-many-requests') {
+      throw new Error('Too many requests. Please wait a few moments before trying again.');
+    }
+    throw new Error('Failed to send password reset email. Please try again later.');
   }
 };
 

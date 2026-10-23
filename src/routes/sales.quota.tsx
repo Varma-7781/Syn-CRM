@@ -9,9 +9,9 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/sales/quota")({
   head: () => ({
     meta: [
-      { title: "Quota & Target History — SYNTRAXS CRM" },
+      { title: "Quota & Target History — NexLead CRM" },
       { name: "description", content: "Your monthly targets against what you achieved." },
-      { property: "og:title", content: "Quota & Target History — SYNTRAXS CRM" },
+      { property: "og:title", content: "Quota & Target History — NexLead CRM" },
       { property: "og:description", content: "Your monthly targets against what you achieved." },
     ],
   }),

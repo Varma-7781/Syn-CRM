@@ -1,4 +1,4 @@
-# Syntraxs CRM — Firebase Cloud Functions
+# NexLead CRM — Firebase Cloud Functions
 
 This directory contains the server-side Cloud Function implementation for secure sales user provisioning using the Firebase Admin SDK.
 

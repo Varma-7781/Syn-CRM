@@ -31,9 +31,9 @@ function sanitizeCsvCell(val: unknown): string {
 export const Route = createFileRoute("/admin/leads")({
   head: () => ({
     meta: [
-      { title: "Lead Management — SYNTRAXS CRM" },
+      { title: "Lead Management — NexLead CRM" },
       { name: "description", content: "Search, filter, assign and update every lead in the pipeline." },
-      { property: "og:title", content: "Lead Management — SYNTRAXS CRM" },
+      { property: "og:title", content: "Lead Management — NexLead CRM" },
       { property: "og:description", content: "Search, filter, assign and update every lead in the pipeline." },
     ],
   }),
@@ -141,7 +141,7 @@ function AdminLeadsPage() {
       "500000",
       "high",
       "new",
-      "Imported via SYNTRAXS template",
+      "Imported via NexLead template",
     ];
 
     const csvContent = [headers.join(","), sampleRow.join(",")].join("\n");
@@ -149,7 +149,7 @@ function AdminLeadsPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "syntraxs_leads_template.csv";
+    link.download = "nexlead_leads_template.csv";
     link.click();
     URL.revokeObjectURL(url);
     toast.success("CSV template downloaded");
@@ -200,8 +200,9 @@ function AdminLeadsPage() {
           const values = jsonData[i] as any[];
           if (!values || values.length === 0) continue;
 
-          const leadData: any = {};
+          const leadData: Record<string, any> = Object.create(null);
           headers.forEach((header, index) => {
+            if (header === "__proto__" || header === "constructor" || header === "prototype") return;
             const val = values[index];
             if (val === undefined || val === null) return;
             const strValue = String(val).trim();
@@ -314,7 +315,7 @@ function AdminLeadsPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `syntraxs_leads_export_${new Date().toISOString().split("T")[0]}.csv`;
+    link.download = `nexlead_leads_export_${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
     toast.success(`Exported ${leads.length} leads to CSV`);

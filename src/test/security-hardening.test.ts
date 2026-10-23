@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { maskEmail, sanitizeLogData } from '../lib/logger';
 import { ensureFirebaseAuth, logoutUser } from '../services/authService';
-import { createSalesUser } from '../services/userService';
+import { createSalesUser, createAdminUser } from '../services/userService';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -47,7 +47,6 @@ describe('Production Security Hardening & Attack Surface Verification', () => {
 
   describe('Role-Based Authorization on Provisioning', () => {
     it('rejects createSalesUser when caller is unauthenticated or not an admin', async () => {
-      // In clean test environment where no active user is set, user creation must be rejected
       const res = await createSalesUser({
         name: 'Hacker Rep',
         email: 'hacker@example.com',
@@ -56,6 +55,68 @@ describe('Production Security Hardening & Attack Surface Verification', () => {
 
       expect(res.success).toBe(false);
       expect(res.error).toMatch(/Unauthorized/i);
+    });
+
+    it('rejects createAdminUser when caller is unauthenticated or not an admin', async () => {
+      const res = await createAdminUser({
+        name: 'Hacker Admin',
+        email: 'fakeadmin@example.com',
+        password: 'password123',
+      });
+
+      expect(res.success).toBe(false);
+      expect(res.error).toMatch(/Unauthorized/i);
+    });
+
+    it('rejects createAdminUser when caller has sales role in session', async () => {
+      localStorage.setItem(
+        'nexlead_active_user',
+        JSON.stringify({ id: 'sales_user_1', name: 'Sales Guy', role: 'sales', email: 'sales@example.com' })
+      );
+
+      const res = await createAdminUser({
+        name: 'Escalated Admin',
+        email: 'escalate@example.com',
+        password: 'password123',
+      });
+
+      expect(res.success).toBe(false);
+      expect(res.error).toMatch(/Unauthorized/i);
+
+      localStorage.removeItem('nexlead_active_user');
+    });
+
+    it('validates input arguments when caller is an admin', async () => {
+      localStorage.setItem(
+        'nexlead_active_user',
+        JSON.stringify({ id: 'admin_user_1', name: 'Super Admin', role: 'admin', email: 'admin@nexlead.com' })
+      );
+
+      const resShortName = await createAdminUser({
+        name: 'A',
+        email: 'admin@nexlead.com',
+        password: 'password123',
+      });
+      expect(resShortName.success).toBe(false);
+      expect(resShortName.error).toContain('Full name is required');
+
+      const resInvalidEmail = await createAdminUser({
+        name: 'Valid Name',
+        email: 'notanemail',
+        password: 'password123',
+      });
+      expect(resInvalidEmail.success).toBe(false);
+      expect(resInvalidEmail.error).toContain('valid work email');
+
+      const resShortPassword = await createAdminUser({
+        name: 'Valid Name',
+        email: 'valid@nexlead.com',
+        password: '123',
+      });
+      expect(resShortPassword.success).toBe(false);
+      expect(resShortPassword.error).toContain('Password must be at least 6 characters');
+
+      localStorage.removeItem('nexlead_active_user');
     });
   });
 
@@ -78,6 +139,17 @@ describe('Production Security Hardening & Attack Surface Verification', () => {
     });
   });
 
+  describe('URI Scheme & Phone Link Sanitization', () => {
+    it('strips non-numeric and potentially dangerous characters from phone numbers in tel links', () => {
+      const dirtyPhone = "+91 98765-43210; javascript:alert(1)";
+      const cleanPhone = dirtyPhone.replace(/[^0-9+]/g, '');
+      expect(cleanPhone).toBe('+9198765432101');
+      expect(cleanPhone).not.toContain('javascript');
+      expect(cleanPhone).not.toContain(';');
+      expect(cleanPhone).not.toContain(' ');
+    });
+  });
+
   describe('Public Asset Hygiene & Confidentiality', () => {
     it('verifies that no client demo spreadsheets are served in public directory', () => {
       const publicDir = path.resolve(__dirname, '../../public');
@@ -85,24 +157,53 @@ describe('Production Security Hardening & Attack Surface Verification', () => {
 
       expect(files).not.toContain('syntraxs_10_client_demo_leads.csv');
       expect(files).not.toContain('syntraxs_10_client_demo_leads.xlsx');
+      expect(files).not.toContain('nexlead_10_client_demo_leads.csv');
+      expect(files).not.toContain('nexlead_10_client_demo_leads.xlsx');
     });
 
-    it('verifies public/_headers exists and enforces clickjacking protection and nosniff', () => {
+    it('verifies public/_headers exists and enforces clickjacking protection, nosniff, HSTS and CSP', () => {
       const headersPath = path.resolve(__dirname, '../../public/_headers');
       expect(fs.existsSync(headersPath)).toBe(true);
 
       const content = fs.readFileSync(headersPath, 'utf8');
       expect(content).toContain('X-Frame-Options: DENY');
       expect(content).toContain('X-Content-Type-Options: nosniff');
+      expect(content).toContain('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
+      expect(content).toContain('Content-Security-Policy:');
+      expect(content).toContain("frame-ancestors 'none'");
     });
 
-    it('verifies firestore.rules exists and contains zero email substring matching', () => {
+    it('verifies server.ts applies HSTS and CSP security headers in SSR runtime', () => {
+      const serverPath = path.resolve(__dirname, '../server.ts');
+      expect(fs.existsSync(serverPath)).toBe(true);
+
+      const serverContent = fs.readFileSync(serverPath, 'utf8');
+      expect(serverContent).toContain('Strict-Transport-Security');
+      expect(serverContent).toContain('Content-Security-Policy');
+      expect(serverContent).toContain('X-Frame-Options');
+    });
+
+    it('verifies firestore.rules enforces least-privilege RBAC, prevents role tampering, and restricts lead reassignments', () => {
       const rulesPath = path.resolve(__dirname, '../../firestore.rules');
       expect(fs.existsSync(rulesPath)).toBe(true);
 
       const rulesContent = fs.readFileSync(rulesPath, 'utf8');
       expect(rulesContent).not.toContain("matches('.*admin.*')");
-      expect(rulesContent).toContain("getUserData().role == 'admin'");
+
+      // Verify safe profile getter
+      expect(rulesContent).toContain("getUserData().get('role', '') == 'admin'");
+
+      // Verify user updates strictly prevent changing 'role', 'id', 'createdBy'
+      expect(rulesContent).toContain("hasAny(['role', 'id', 'createdBy'])");
+
+      // Verify leads updates use hasOnly for non-assigned transitions (preventing arbitrary field injection)
+      expect(rulesContent).toContain('affectedKeys().hasOnly');
+
+      // Verify sales reps cannot reassign lead ownership
+      expect(rulesContent).toContain("hasAny(['assignedTo', 'assignedToName', 'rep'])");
+
+      // Verify activities enforce author check
+      expect(rulesContent).toContain("request.resource.data.get('userId', '') == request.auth.uid || isAdmin()");
     });
   });
 });

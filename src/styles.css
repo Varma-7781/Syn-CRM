@@ -269,7 +269,7 @@
 @utility animate-doodle-float-alt { animation: doodle-float-reverse 18s ease-in-out infinite; }
 @utility animate-doodle-pulse { animation: doodle-pulse-subtle 4s ease-in-out infinite; }
 
-/* Right-side business doodle background (Syntraxs CRM) */
+/* Right-side business doodle background (NexLead CRM) */
 .login-doodle-bg {
   background-image: url('/login-frame.png');
   background-repeat: no-repeat;

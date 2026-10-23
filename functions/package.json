@@ -1,5 +1,5 @@
 {
-  "name": "syntraxs-crm-functions",
+  "name": "nexlead-crm-functions",
   "scripts": {
     "lint": "eslint --ext .js,.ts .",
     "build": "tsc",

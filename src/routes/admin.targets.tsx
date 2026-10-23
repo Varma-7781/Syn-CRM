@@ -13,9 +13,9 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/admin/targets")({
   head: () => ({
     meta: [
-      { title: "Target Management — SYNTRAXS CRM" },
+      { title: "Target Management — NexLead CRM" },
       { name: "description", content: "Set and track weekly and monthly targets for every rep." },
-      { property: "og:title", content: "Target Management — SYNTRAXS CRM" },
+      { property: "og:title", content: "Target Management — NexLead CRM" },
       { property: "og:description", content: "Set and track weekly and monthly targets for every rep." },
     ],
   }),

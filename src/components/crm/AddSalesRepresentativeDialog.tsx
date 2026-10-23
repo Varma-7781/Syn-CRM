@@ -159,7 +159,7 @@ export function AddSalesRepresentativeDialog({ open, onOpenChange }: AddSalesRep
                 disabled={loading}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="kavya@syntraxs.com"
+                placeholder="kavya@nexlead.com"
                 className="h-9 w-full rounded-md border border-border bg-background pl-9 pr-3 text-[13px] text-foreground outline-none focus:border-primary placeholder:text-muted-foreground disabled:opacity-50"
               />
             </div>
