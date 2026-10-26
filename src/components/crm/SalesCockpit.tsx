@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Clock, PhoneCall, CheckCircle } from "lucide-react";
 import { AppPage } from "@/components/crm/AppPage";
 import { Kpi, KpiStrip, Meter } from "@/components/crm/primitives";
@@ -6,10 +6,12 @@ import { LeadTable } from "@/components/crm/LeadTable";
 import { Button } from "@/components/ui/button";
 import { inr } from "@/lib/crm-data";
 import { useCRM } from "@/context/CRMContext";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export function SalesCockpit() {
   const { currentUser, leads, targets, upcomingFollowUps, updateLead } = useCRM();
+  const [viewMode, setViewMode] = useState<"mine" | "unassigned" | "all">("mine");
 
   const userName = currentUser?.name || "Sales Rep";
 
@@ -25,6 +27,16 @@ export function SalesCockpit() {
     );
     return assigned;
   }, [leads, currentUser]);
+
+  const unassigned = useMemo(() => {
+    return leads.filter((l) => !l.assignedTo && !l.assignedToName && !l.rep);
+  }, [leads]);
+
+  const displayedLeads = useMemo(() => {
+    if (viewMode === "unassigned") return unassigned;
+    if (viewMode === "all") return leads;
+    return mine;
+  }, [viewMode, mine, unassigned, leads]);
 
   const wonLeads = useMemo(() => mine.filter((l) => l.status === "won"), [mine]);
   const wonRev = useMemo(() => wonLeads.reduce((a, l) => a + (l.value || 0), 0), [wonLeads]);
@@ -111,7 +123,88 @@ export function SalesCockpit() {
         </Kpi>
       </KpiStrip>
 
-      <LeadTable leads={mine} />
+      {/* Pipeline View Switcher: My Leads | Unassigned Pool | All Leads */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+        <div className="flex items-center gap-1.5 rounded-lg border border-border bg-surface p-1">
+          <button
+            type="button"
+            onClick={() => setViewMode("mine")}
+            className={cn(
+              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-colors cursor-pointer",
+              viewMode === "mine"
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <span>My Pipeline</span>
+            <span
+              className={cn(
+                "rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold",
+                viewMode === "mine" ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
+              )}
+            >
+              {mine.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setViewMode("unassigned")}
+            className={cn(
+              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-colors cursor-pointer",
+              viewMode === "unassigned"
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <span>Unassigned Pool</span>
+            <span
+              className={cn(
+                "rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold",
+                viewMode === "unassigned" ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
+              )}
+            >
+              {unassigned.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setViewMode("all")}
+            className={cn(
+              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-colors cursor-pointer",
+              viewMode === "all"
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <span>All Leads</span>
+            <span
+              className={cn(
+                "rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold",
+                viewMode === "all" ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
+              )}
+            >
+              {leads.length}
+            </span>
+          </button>
+        </div>
+
+        {mine.length === 0 && leads.length > 0 && viewMode === "mine" && (
+          <div className="flex items-center gap-2 text-[12.5px] text-muted-foreground">
+            <span>No leads assigned specifically to you yet.</span>
+            <button
+              type="button"
+              onClick={() => setViewMode(unassigned.length > 0 ? "unassigned" : "all")}
+              className="font-medium text-primary hover:underline cursor-pointer"
+            >
+              View {unassigned.length > 0 ? `${unassigned.length} unassigned leads` : `all ${leads.length} leads`} →
+            </button>
+          </div>
+        )}
+      </div>
+
+      <LeadTable leads={displayedLeads} />
     </AppPage>
   );
 }

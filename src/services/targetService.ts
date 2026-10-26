@@ -144,18 +144,19 @@ export const subscribeToUserTargets = (userId: string, callback: (targets: Targe
   if (!guardFirebase()) return () => {};
   const q = query(
     collection(db!, COLLECTION_NAME),
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc')
+    where('userId', '==', userId)
   );
 
   return onSnapshot(
     q,
     (snapshot) => {
-      const targets = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Target));
+      const targets = snapshot.docs
+        .map((d) => ({ id: d.id, ...d.data() } as Target))
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
       callback(targets);
     },
-    () => {
-      logger.error('[TARGETS] User targets subscription interrupted');
+    (err) => {
+      logger.error('[TARGETS] User targets subscription interrupted', err?.message || err);
     }
   );
 };

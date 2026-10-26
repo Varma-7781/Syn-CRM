@@ -286,17 +286,25 @@ function LeadDrawer({ lead, onClose, onSave }: { lead: Lead | null; onClose: () 
     if (!lead) return;
     setSaving(true);
     try {
-      const targetUser = users.find((u) => u.name === assignedRep);
       const updates: any = {
         status,
         priority,
         nextFollowUp: followUp || undefined,
         value: Number(val) || 0,
         notes,
-        rep: assignedRep || null,
-        assignedToName: assignedRep || null,
-        assignedTo: targetUser?.id || (assignedRep ? targetUser?.email || assignedRep : null),
       };
+
+      if (currentUser?.role === "admin") {
+        const targetUser = users.find((u) => u.name === assignedRep);
+        updates.rep = assignedRep || null;
+        updates.assignedToName = assignedRep || null;
+        updates.assignedTo = targetUser?.id || (assignedRep ? targetUser?.email || assignedRep : null);
+      } else if (!lead.assignedTo && !lead.assignedToName && !lead.rep && assignedRep === currentUser?.name) {
+        // Sales rep claiming an unassigned lead
+        updates.rep = currentUser?.name;
+        updates.assignedToName = currentUser?.name;
+        updates.assignedTo = currentUser?.id;
+      }
       if (status === "interested" && lead.status !== "interested") {
         updates.interestedAt = new Date().toISOString();
         updates.interestedBy = currentUser?.id || "sales";

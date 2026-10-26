@@ -214,20 +214,22 @@ export const subscribeToLeads = (callback: (leads: Lead[]) => void) => {
  */
 export const subscribeToUserLeads = (userId: string, callback: (leads: Lead[]) => void) => {
   if (!guardFirebase()) return () => {};
+  // Avoid compound inequality/ordering query that requires manual composite Firestore indexes
   const q = query(
     collection(db!, COLLECTION_NAME),
-    where('assignedTo', '==', userId),
-    orderBy('createdAt', 'desc')
+    where('assignedTo', '==', userId)
   );
 
   return onSnapshot(
     q,
     (snapshot) => {
-      const leads = snapshot.docs.map((d, i) => normalizeLead({ id: d.id, ...d.data() }, i));
+      const leads = snapshot.docs
+        .map((d, i) => normalizeLead({ id: d.id, ...d.data() }, i))
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
       callback(leads);
     },
-    () => {
-      logger.error('[LEADS] User leads subscription interrupted');
+    (err) => {
+      logger.error('[LEADS] User leads subscription interrupted', err?.message || err);
     }
   );
 };

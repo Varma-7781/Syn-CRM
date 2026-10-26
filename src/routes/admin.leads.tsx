@@ -234,6 +234,21 @@ function AdminLeadsPage() {
               const pClean = strValue.toLowerCase().trim();
               leadData.priority = (pClean === "high" || pClean === "low") ? pClean : "medium";
             }
+            else if (header.includes("rep") || header.includes("assign")) {
+              leadData.rep = strValue;
+              leadData.assignedToName = strValue;
+              const matchedUser = salesMembers.find(
+                (u) =>
+                  u.name.toLowerCase() === strValue.toLowerCase() ||
+                  (u.email && u.email.toLowerCase() === strValue.toLowerCase()) ||
+                  u.id === strValue
+              );
+              if (matchedUser) {
+                leadData.assignedTo = matchedUser.id;
+                leadData.assignedToName = matchedUser.name;
+                leadData.rep = matchedUser.name;
+              }
+            }
             else if (header.includes("note")) leadData.notes = strValue;
           });
 

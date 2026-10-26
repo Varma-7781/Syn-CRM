@@ -21,7 +21,41 @@ export const STORAGE_KEY = 'nexlead_active_user';
  */
 export const ensureFirebaseAuth = async (): Promise<boolean> => {
   if (!isFirebaseEnabled() || !auth) return false;
-  return !!auth.currentUser;
+  if (auth.currentUser) return true;
+
+  // Wait for Firebase to finish restoring persisted auth state asynchronously
+  if (typeof (auth as any).authStateReady === 'function') {
+    try {
+      await (auth as any).authStateReady();
+      return !!auth.currentUser;
+    } catch {
+      // Fallback to onAuthStateChanged below
+    }
+  }
+
+  return new Promise<boolean>((resolve) => {
+    let resolved = false;
+    const unsubscribe = auth!.onAuthStateChanged((user) => {
+      if (!resolved) {
+        resolved = true;
+        try {
+          unsubscribe();
+        } catch {}
+        resolve(!!user);
+      }
+    });
+
+    // Safety timeout: don't hang indefinitely if network/auth is unreachable
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        try {
+          unsubscribe();
+        } catch {}
+        resolve(!!auth?.currentUser);
+      }
+    }, 1500);
+  });
 };
 
 /**

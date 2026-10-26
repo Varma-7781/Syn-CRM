@@ -201,13 +201,8 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
         }
       };
 
-      // Least Privilege & Data Minimization:
-      // Admins subscribe to organization-wide leads; sales representatives subscribe only to assigned leads.
-      if (currentUser?.role === 'admin') {
-        unsubLeads = leadService.subscribeToLeads(handleLeadsSnapshot);
-      } else if (currentUser?.id) {
-        unsubLeads = leadService.subscribeToUserLeads(currentUser.id, handleLeadsSnapshot);
-      }
+      // Real-time synchronization for all authenticated CRM users:
+      unsubLeads = leadService.subscribeToLeads(handleLeadsSnapshot);
 
       unsubUsers = userService.subscribeToUsers((fetchedUsers) => {
         if (!cancelled) {

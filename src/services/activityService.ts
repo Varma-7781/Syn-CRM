@@ -219,18 +219,19 @@ export const subscribeToUserActivities = (userId: string, callback: (activities:
   if (!guardFirebase()) return () => {};
   const q = query(
     collection(db!, COLLECTION_NAME),
-    where('userId', '==', userId),
-    orderBy('timestamp', 'desc')
+    where('userId', '==', userId)
   );
 
   return onSnapshot(
     q,
     (snapshot) => {
-      const activities = snapshot.docs.map((d) => normalizeActivity({ id: d.id, ...d.data() }));
+      const activities = snapshot.docs
+        .map((d) => normalizeActivity({ id: d.id, ...d.data() }))
+        .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
       callback(activities);
     },
-    () => {
-      logger.error('[ACTIVITIES] User activities subscription interrupted');
+    (err) => {
+      logger.error('[ACTIVITIES] User activities subscription interrupted', err?.message || err);
     }
   );
 };

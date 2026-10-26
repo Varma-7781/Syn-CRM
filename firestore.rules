@@ -76,12 +76,8 @@ service cloud.firestore {
     // LEADS COLLECTION
     // ==========================================
     match /leads/{leadId} {
-      // Admins can read all leads; reps can read assigned leads or unassigned pool
-      allow read: if isAuthenticated() && (
-        isAdmin() ||
-        isAssignedRep(resource.data) ||
-        resource.data.get('assignedTo', null) == null
-      );
+      // Authenticated team members can read leads for pipeline coordination and real-time synchronization
+      allow read: if isAuthenticated();
 
       // Authenticated team members can create leads (manual entry or batch import)
       allow create: if isAuthenticated() && (
