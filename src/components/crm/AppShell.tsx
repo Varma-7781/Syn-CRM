@@ -90,17 +90,15 @@ export function AppShell({ role, children }: { role: "admin" | "sales"; children
 
   const sidebar = (
     <div className="flex h-full flex-col">
-      <div className="flex flex-col justify-center border-b border-sidebar-border px-4 py-3">
-        <div className="flex items-center justify-between">
-          <Wordmark size="sm" withTagline />
-          <button
-            className="flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-foreground lg:hidden transition-colors"
-            onClick={() => setOpen(false)}
-            aria-label="Close menu"
-          >
-            <X className="size-5" />
-          </button>
-        </div>
+      <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4">
+        <Wordmark />
+        <button
+          className="flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-foreground lg:hidden transition-colors"
+          onClick={() => setOpen(false)}
+          aria-label="Close menu"
+        >
+          <X className="size-5" />
+        </button>
       </div>
       <nav className="flex-1 space-y-5 overflow-y-auto px-2.5 py-4">
         {nav.map((g) => (
@@ -152,12 +150,10 @@ export function AppShell({ role, children }: { role: "admin" | "sales"; children
           </button>
         </div>
         {/* Bottom Left Website Tagline */}
-        <div className="mt-1.5 border-t border-sidebar-border/60 pt-2 px-2 pb-0.5 flex items-center justify-between text-[10.5px] text-muted-foreground">
-          <span className="flex items-center gap-1.5 font-medium">
-            <span className="size-1.5 rounded-full bg-primary/80 animate-pulse-dot" />
-            <span>Powered by <span className="font-semibold text-foreground/95">Syntraxs Technologies</span></span>
-          </span>
-          <span className="text-[9.5px] font-mono text-muted-foreground/60">v2.4</span>
+        <div className="mt-1.5 border-t border-sidebar-border/60 pt-2 px-1.5 pb-0.5 flex items-center gap-1.5 whitespace-nowrap overflow-hidden">
+          <span className="size-1.5 shrink-0 rounded-full bg-primary animate-pulse-dot" />
+          <span className="text-[10px] text-muted-foreground font-normal tracking-tight">Powered by</span>
+          <span className="text-[11.5px] font-semibold text-foreground tracking-tight whitespace-nowrap">Syntraxs Technologies</span>
         </div>
       </div>
     </div>
