@@ -21,7 +21,7 @@ export function LoginScreen() {
 
         <header className="relative z-10 flex h-14 shrink-0 items-center justify-between px-4 sm:px-6 pt-1 lg:justify-end lg:px-8 lg:pt-3">
           <div className="flex items-center lg:hidden">
-            <Wordmark size="md" />
+            <Wordmark size="md" withTagline />
           </div>
           <button
             onClick={(e) => toggle(e)}
@@ -48,7 +48,7 @@ export function LoginScreen() {
         </main>
 
         <footer className="relative z-10 flex h-10 shrink-0 items-center justify-between px-4 sm:px-6 pb-2 text-[11px] font-medium text-muted-foreground lg:px-8 lg:pb-3.5">
-          <span>© 2026 NexLead CRM</span>
+          <span>© 2026 NexLead CRM · Powered by <span className="font-semibold text-foreground/90">Syntraxs Technologies</span></span>
           <span className="flex items-center gap-1.5"><ShieldCheck className="size-3 text-success" /> Encrypted session</span>
         </footer>
       </div>
@@ -388,7 +388,7 @@ function BrandSide() {
       <div className="relative z-10 flex h-full flex-col justify-between px-8 py-4 xl:px-14 xl:py-6">
         <div>
           <div className="animate-rise self-start pb-2.5">
-            <Wordmark size="xl" />
+            <Wordmark size="xl" withTagline />
           </div>
           <div className="mt-3.5 max-w-[500px] animate-rise xl:mt-6" style={{ animationDelay: "120ms" }}>
             <h2 className="text-[26px] font-semibold leading-[1.08] tracking-[-0.03em] text-foreground xl:text-[36px]">
@@ -401,6 +401,13 @@ function BrandSide() {
         </div>
         <div className="relative my-auto flex-1 min-h-0 flex items-center justify-center animate-rise py-1" style={{ animationDelay: "240ms" }}>
           <Workspace />
+        </div>
+        <div className="pt-2 text-[11px] font-medium text-muted-foreground/80 flex items-center justify-between border-t border-border/30">
+          <span className="flex items-center gap-1.5">
+            <span className="size-1 rounded-full bg-primary/80 animate-pulse-dot" />
+            <span>Enterprise Workspace</span>
+          </span>
+          <span>Powered by <span className="font-semibold text-foreground/90">Syntraxs Technologies</span></span>
         </div>
       </div>
     </div>

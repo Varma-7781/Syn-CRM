@@ -37,11 +37,13 @@ export function Wordmark({
   className,
   imageClassName,
   size = "md",
+  withTagline = false,
 }: {
   compact?: boolean;
   className?: string;
   imageClassName?: string;
   size?: "sm" | "md" | "lg" | "xl";
+  withTagline?: boolean;
 }) {
   const [imgError, setImgError] = useState(false);
   const { theme } = useTheme();
@@ -61,36 +63,44 @@ export function Wordmark({
   return (
     <div
       className={cn(
-        "inline-flex items-center select-none transition-all duration-300 ease-in-out group",
+        "inline-flex flex-col select-none transition-all duration-300 ease-in-out group",
         className
       )}
     >
-      {!imgError ? (
-        <img
-          src={isLight ? "/nexlead-wordmark.png" : "/nexlead-wordmark-dark.png"}
-          alt="NexLead CRM"
-          className={cn(
-            "w-auto object-contain transition-all duration-300 filter drop-shadow-[0_2px_8px_rgba(37,99,235,0.2)]",
-            heightClass,
-            imageClassName
-          )}
-          onError={() => setImgError(true)}
-        />
-      ) : (
-        /* High-fidelity CSS/SVG Fallback matching the exact Typography and Letter Styling */
-        <div className="flex items-center gap-2.5">
-          <BrandMark className={size === "xl" ? "size-9" : size === "lg" ? "size-8" : "size-7"} />
-          <div className="h-5 w-px bg-slate-700/80" />
-          <div className="leading-none">
-            <div className={cn("flex items-center font-black tracking-[-0.02em]", size === "xl" ? "text-[18px]" : size === "lg" ? "text-[16px]" : "text-[14.5px]")}>
-              <span className={isLight ? "text-slate-900" : "text-white"}>Nex</span>
-              <span className="text-[#3078FB]">Lead</span>
-            </div>
-            <div className="mt-0.5 text-[8.5px] font-bold text-muted-foreground tracking-[0.2em] uppercase">
-              CRM
+      <div className="inline-flex items-center">
+        {!imgError ? (
+          <img
+            src={isLight ? "/nexlead-wordmark.png" : "/nexlead-wordmark-dark.png"}
+            alt="NexLead CRM"
+            className={cn(
+              "w-auto object-contain transition-all duration-300 filter drop-shadow-[0_2px_8px_rgba(37,99,235,0.2)]",
+              heightClass,
+              imageClassName
+            )}
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          /* High-fidelity CSS/SVG Fallback matching the exact Typography and Letter Styling */
+          <div className="flex items-center gap-2.5">
+            <BrandMark className={size === "xl" ? "size-9" : size === "lg" ? "size-8" : "size-7"} />
+            <div className="h-5 w-px bg-slate-700/80" />
+            <div className="leading-none">
+              <div className={cn("flex items-center font-black tracking-[-0.02em]", size === "xl" ? "text-[18px]" : size === "lg" ? "text-[16px]" : "text-[14.5px]")}>
+                <span className={isLight ? "text-slate-900" : "text-white"}>Nex</span>
+                <span className="text-[#3078FB]">Lead</span>
+              </div>
+              <div className="mt-0.5 text-[8.5px] font-bold text-muted-foreground tracking-[0.2em] uppercase">
+                CRM
+              </div>
             </div>
           </div>
-        </div>
+        )}
+      </div>
+      {withTagline && (
+        <span className="mt-1 flex items-center gap-1 text-[10px] sm:text-[10.5px] font-medium tracking-tight text-muted-foreground/80">
+          <span>Powered by</span>
+          <span className="font-semibold text-foreground/90">Syntraxs Technologies</span>
+        </span>
       )}
     </div>
   );

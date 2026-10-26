@@ -90,15 +90,17 @@ export function AppShell({ role, children }: { role: "admin" | "sales"; children
 
   const sidebar = (
     <div className="flex h-full flex-col">
-      <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4">
-        <Wordmark />
-        <button
-          className="flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-foreground lg:hidden transition-colors"
-          onClick={() => setOpen(false)}
-          aria-label="Close menu"
-        >
-          <X className="size-5" />
-        </button>
+      <div className="flex flex-col justify-center border-b border-sidebar-border px-4 py-3">
+        <div className="flex items-center justify-between">
+          <Wordmark size="sm" withTagline />
+          <button
+            className="flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-foreground lg:hidden transition-colors"
+            onClick={() => setOpen(false)}
+            aria-label="Close menu"
+          >
+            <X className="size-5" />
+          </button>
+        </div>
       </div>
       <nav className="flex-1 space-y-5 overflow-y-auto px-2.5 py-4">
         {nav.map((g) => (
@@ -148,6 +150,14 @@ export function AppShell({ role, children }: { role: "admin" | "sales"; children
           >
             <LogOut className="size-4" />
           </button>
+        </div>
+        {/* Bottom Left Website Tagline */}
+        <div className="mt-1.5 border-t border-sidebar-border/60 pt-2 px-2 pb-0.5 flex items-center justify-between text-[10.5px] text-muted-foreground">
+          <span className="flex items-center gap-1.5 font-medium">
+            <span className="size-1.5 rounded-full bg-primary/80 animate-pulse-dot" />
+            <span>Powered by <span className="font-semibold text-foreground/95">Syntraxs Technologies</span></span>
+          </span>
+          <span className="text-[9.5px] font-mono text-muted-foreground/60">v2.4</span>
         </div>
       </div>
     </div>
@@ -216,7 +226,16 @@ export function AppShell({ role, children }: { role: "admin" | "sales"; children
             )}
           </div>
         </header>
-        <main className="mx-auto w-full max-w-[1480px] space-y-5 p-3.5 sm:p-4 lg:p-6">{children}</main>
+        <main className="mx-auto w-full max-w-[1480px] space-y-5 p-3.5 sm:p-4 lg:p-6 pb-10">
+          {children}
+          <footer className="mt-12 border-t border-border/50 pt-4 flex flex-wrap items-center justify-between gap-2 text-[11.5px] text-muted-foreground">
+            <span>© 2026 NexLead CRM · Intelligent Sales Operations</span>
+            <span className="font-medium flex items-center gap-1.5">
+              <span className="size-1 rounded-full bg-primary/70 animate-pulse-dot" />
+              <span>Powered by <span className="font-semibold text-foreground/90">Syntraxs Technologies</span></span>
+            </span>
+          </footer>
+        </main>
       </div>
     </div>
   );
